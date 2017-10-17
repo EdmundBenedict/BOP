@@ -1,0 +1,51 @@
+ 
+      subroutine gethu(u,nu,hu,nhu)
+          use mod_precision
+
+
+          use mod_const
+
+      implicit none
+
+      include "Include/Atom.array"
+      include "Include/Hamilt.array"
+      include "Include/NebList.array"
+
+
+      real(dp) :: uli
+
+      integer :: nstta,nsttb, ia,ib,ja,ja0,ic,la,lb,nu,nhu,i,l,dj,j
+
+      real(dp) :: u(mxnstat,nu)
+      real(dp) :: hu(mxnstat,nhu)
+      
+      hu(:,:) = 0.0_dp
+
+      do i = 1,nu
+         ia = cluster(i)
+         ja0 = aptr(ia) - 1
+         do j = 1, aptr(ia+1) - ja0 -2
+            ib = bptr(j+ja0)
+            ic = decipher(ib)
+            if (ic /= 0) then
+               do lb = 1,nstt(z(ib))
+                  hu(lb,ic) = hu(lb,ic) + dot_product(h(:,lb,j,i),u(:,i))
+               end do
+            endif
+         enddo
+      enddo
+    
+      end
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      

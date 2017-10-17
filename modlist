@@ -1,0 +1,5 @@
+>>module list
+
+Currently Loaded Modulefiles:
+  1) gcc/5.3.0                  2) openmpi/1.10.1/gcc/5.3.0   3) intel/14.0.1               4) libxc/2.2.2/intel/14.0.1
+

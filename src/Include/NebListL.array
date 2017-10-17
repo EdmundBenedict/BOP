@@ -1,0 +1,12 @@
+!*** APTR is an array of pointers to the neighbor list.
+      integer aptrl(mxtotnd)
+
+!*** BPTR is the neighbor list.
+      integer bptrl(mxnbl)
+
+!
+!    Declare the common blocks.
+!
+
+      common /nebl/aptrl,bptrl
+

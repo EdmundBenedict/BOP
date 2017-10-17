@@ -1,0 +1,140 @@
+!  Starting value for the Fermi energy iterations.
+
+      real(dp) ::   eflo
+      common /saveeflo/  eflo
+
+
+!  Parameters for the energy surface.
+
+      integer           numpointsa, numpointsc
+      real(dp) ::  zmina, zmaxa, zminc, zmaxc
+
+      common /esurf/    zmina, zmaxa, zminc, zmaxc, &
+     &                  numpointsa, numpointsc
+
+!  Parameters for the energy/volume.
+
+      integer           numpointsv, numpointsrt
+      real(dp) ::  zminv, zmaxv, zminrt, zmaxrt
+
+      common /esurf/    zminv, zmaxv, zminrt, zmaxrt, &
+     &                  numpointsv, numpointsrt
+
+!  Parameters for the gamma-surface and grain boundary relaxation.
+
+      real(dp) ::  gamxmin, gamxmax, gamymin, gamymax
+      real(dp) ::  gamxstep, gamystep, zeroheight
+      integer           gamxnp, gamynp, indrelax, req
+
+      common  /gamma/   gamxmin, gamxmax, gamymin, gamymax, &
+     &                  gamxstep, gamystep, zeroheight, &
+     &                  gamxnp, gamynp, indrelax, req
+
+      integer           pointsgs, gbmoveopt
+      real(dp) ::  xshiftgb, yshiftgb, zshiftgb
+      real(dp), target ::  unshad  ( 3, mxnd )
+      real(dp) ::  unshind ( 3, minert )
+
+      common /faults/   pointsgs, gbmoveopt, xshiftgb, yshiftgb, &
+     &                  zshiftgb, unshad, unshind
+
+
+!  Maximum number of neighbors for one atom at current iteration.
+
+      integer           maxnumnb
+      common  /nbmax/   maxnumnb
+
+
+!  Flags for the Finnis-Sinclair potentials and array for screening
+!  function for env. part: M. Cawkwell 14/1/2004
+
+      integer           fs_include, fs_only, emb_include, pot_scl
+      integer           env_include,vpair_include
+      common  /finsin/  fs_include, fs_only, emb_include, pot_scl, &
+     &                  env_include, vpair_include
+
+ 
+      integer           envscron, senvprod, senvsum
+      real(dp) ::  aescra, aescrmu, bescra, bescrmu
+      real(dp) ::  abescra, abescrmu
+      real(dp) ::  omsenvij, senvfc(3)
+      common /screnv/   senvfc, omsenvij, aescra, aescrmu, bescra, &
+     &                  bescrmu, abescra, abescrmu, envscron, &
+     &                  senvprod, senvsum
+
+!  Index for the Finnis-Sinclair potential.
+  
+      integer           ind( mxtotnd )
+      common  /indexfs/ ind
+
+!  Index fo the structural type.
+
+      character*6       strtyp
+      common  /strtype/ strtyp 
+
+
+!  Sub-block forces and layer information.
+
+      integer           do_subblock, const_volume
+      real(dp) ::  fblock( 3, mxnd + 1 ), fatom( 3, mxnd )
+      common /subblock/ do_subblock, const_volume, fblock, fatom
+      integer           num_of_layers, finlay(100), ninlay(100)
+      integer           lay(mxnd)
+      common /layers/   num_of_layers, finlay, ninlay, lay
+      
+
+!  Relaxation constant.
+    
+      real(dp) ::  ok
+      common /relconst/ ok
+
+
+!  Total time.
+
+      real(dp) ::  tot_time, tint
+      common /keeptime/ tot_time, tint
+
+
+!  Unrelaxed coordinates (for plotting the dislocation).
+
+      real(dp) ::  xxmin, xxmax, yymin, yymax, zzmin, zzmax
+      real(dp), target ::  unrld(3,mxnd)
+      real(dp) ::  plxmin, plxmax, plymin, plymax
+      common  /plotds/    xxmin, xxmax, yymin, yymax, zzmin, zzmax, &
+     &                  plxmin, plxmax, plymin, plymax, unrld
+
+      integer           nne
+      common  /neatom1/ nne
+      real(dp) ::  latpar
+      common  /neatom2/ latpar
+
+      real(dp) ::  shcrd(3,mxnd)
+      common  /shift/   shcrd
+
+!     Detemine whether GFBCs should be used in dislocation simulation
+!     M. Cawkwell 14/1/2004
+
+      integer gfbcon
+      common /usegfbc/ gfbcon     
+
+!  Stress application
+
+      real(dp) ::  totstr
+      real(dp) ::  et(3,3)
+!      real(dp) ::  strad(3,mxnd)
+      common  /strcrd/  totstr, et
+
+
+!  Parameters for the dislocation self-energy calculation.
+!
+!	Modified by M. Cawkwell. Dislocation line now parallel to z.
+!	29th July 2003
+!
+
+      integer           n_mesh, klp
+      real(dp) ::  x_center, y_center, r_min, r_max, e_coh
+      real(dp) ::  radius, log_rad
+      common  /lplot/   n_mesh, klp, radius, log_rad, &
+     &                  x_center, y_center, r_min, r_max, e_coh
+
+

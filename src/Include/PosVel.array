@@ -1,0 +1,35 @@
+ 
+!
+!    Atomic positions and velocities.
+!
+
+!*** A(1,1) = a1(1), A(1,2) = a1(2) etc. This is in Cartesian coordinates.
+      real(dp) :: a(3,3)
+
+!*** The lengths of the primitive translation vectors.
+      real(dp) :: lena(3)
+
+!*** Basis set in reduced coordinates.
+      real(dp) :: d(3,mxnd)
+      real(dp) :: dinert(3,minert)
+
+!*** Basis set in Cartesian coordinates.
+      real(dp), target :: ad(3,mxtotnd)
+      real(dp) :: adinert(3,minert)
+      real(dp) :: newad(3,mxnd)
+
+!*** Time averaged positions and mean squared displacement arrays.
+      real(dp) :: adsum(3,mxnd)
+      real(dp) :: adnopb(3,mxnd)
+      real(dp) :: dispo(mxnd)
+
+!*** The velocities of the atoms.
+      real(dp) :: vel(3,mxnd)
+
+!
+!    Declare the common blocks.
+!
+
+      common /posdp/a,lena,d,dinert,ad,adinert,newad,adsum,adnopb, & 
+     &	            dispo,vel
+

@@ -1,0 +1,186 @@
+ 
+      subroutine bldh()
+        use mod_precision
+        use mod_all_scalar
+        use mod_const
+        use mod_ham
+!
+!    This is a subroutine to set up a tight binding Hamiltonian matrix.
+!
+
+      implicit none
+
+
+      include "Include/Atom.array"
+      include "Include/NebList.array"
+      include "Include/PosVel.array"
+
+
+      real(dp) :: dea
+      real(dp) :: errdx,errdy,errdz,errlmt
+
+      integer za,zb
+      integer ja,ja0,ia,ib
+      integer mxh
+      integer nclus,ic,i,j
+      integer t1,t2,t3,t4,t5
+      integer nl1,nl2,llist1(ml),llist2(ml)
+      real(dp) :: scf(14),scfcut(14)
+
+!*** Displacement.
+      real(dp) :: dr(3)
+
+!
+!    Set up the Hamiltonian.
+!
+!    For each ion (A) do ...
+!
+
+      errlmt=0.001
+      t1=0
+      t2=0
+      t3=0
+      t4=0
+      nclus = pcluster(nbase+1)-1
+      mxh = nclus*mxnstat
+      do ic = 1,nclus,1
+
+         ia = cluster(ic)
+
+         za = z(ia)
+         call states(za,nla,nstta,llista)
+         if (map(ia) == 0) then
+            dea = 0.0_dp
+         else
+            dea = de(map(ia))
+         endif
+
+!
+!       For each neighboring ion (B) do ...
+!
+
+         ja = aptr(ia)
+         ja0 = ja - 1
+         do while (bptr(ja) /= eol)
+            ib = bptr(ja)
+
+            zb = z(ib)
+            call states(zb,nlb,nsttb,llistb)
+!             dr(1) = ad(1,ia)-ad(1,ib)
+!             dr(2) = ad(2,ia)-ad(2,ib)
+!             dr(3) = ad(3,ia)-ad(3,ib)
+            dr(:) = ad(:,ia)-ad(:,ib)
+!             magdr = dr(1)*dr(1)+dr(2)*dr(2)+dr(3)*dr(3)
+
+
+! Test IA and IB and include correct Screening Function
+
+            
+            if ( (scf_include == 0) .or. (ia == ib)) then
+!                 if (magdr < 1.0e-6_dp) print *,'ia,ib,ja-ja0,ic',ia,ib,ja-ja0,ic
+               do i=1,14,1
+                  scfcut(i) = 1.0_dp
+               enddo
+
+            else
+               if (ia <= nd) then
+
+!                  WRITE(*,'(3I6)') IA,IB,NNBND(IA)
+                  t1=t1+1
+                  
+                  do i=1,nnbnd(ia)
+
+                     errdx=abs(nnbdr(1,ia,i)-dr(1))
+                     errdy=abs(nnbdr(2,ia,i)-dr(2))
+                     errdz=abs(nnbdr(3,ia,i)-dr(3))
+
+                     if ( ( errdx < errlmt ) .and. &
+     &                    ( errdy < errlmt ) .and. &
+     &                    ( errdz < errlmt ) ) then
+
+
+                        do j=1,14,1
+                           scfcut(j) = scr(j,ia,i)
+                        enddo
+                        t2=t2+1
+
+                     endif
+
+                  enddo
+
+               elseif ( map(ia)  /=  0 ) then
+
+                  t3=t3+1
+                  t5=0
+                  do i=1,nnbnd( map(ia) )
+
+                     errdx=abs(nnbdr(1,map(ia),i)-dr(1))
+                     errdy=abs(nnbdr(2,map(ia),i)-dr(2))
+                     errdz=abs(nnbdr(3,map(ia),i)-dr(3))
+
+                     if ( ( errdx < errlmt ) .and. &
+     &                    ( errdy < errlmt ) .and. &
+     &                    ( errdz < errlmt ) ) then
+
+
+!                        WRITE(*,'(3I6)') IA,MAP(IA),IB
+!                        WRITE(*,'(3F8.4)') -DR(1),-DR(2),-DR(3)
+!                        WRITE(*,'(3F8.4)') NNBDR(MAP(IA),I,1),
+!     &                    NNBDR(MAP(IA),I,2),NNBDR(MAP(IA),I,3)
+
+                        do j=1,14,1
+
+!                           IF ( DINT( 1000*SCF(J) ).NE.
+!     &                          DINT( 1000*SCR(J,MAP(IA),I) ) ) THEN
+!                               WRITE(*,*) SCF(J),SCR(J,MAP(IA),I)
+!                              WRITE(*,'(3F8.4)') -DR(1),-DR(2),-DR(3)
+!                           ELSE
+!                              WRITE(*,'("*** OK ***")')
+!                           ENDIF
+
+                           scfcut(j) = scr(j,map(ia),i)
+
+                        enddo
+                        t4=t4+1
+                        t5=1
+
+                     endif
+
+                  enddo
+
+                  if (t5 == 0) then
+                     write(*,*) "T5 is equal to zero"
+                     write(*,*) ia,map(ia)
+                  endif
+
+               else
+
+                  call screenf(ia,ib,scf)
+                  call scrcut(scf,scfcut)
+               endif
+
+            
+            endif
+
+!             if ((.not. onsonly) .or. (magdr < 1.0e-12_dp)) then
+!             if (onsonly) print *,'ia,ib,j',ia,ib,ja-ja0
+            call matel(za,nl1,nstta,llist1,zb,nl2,nsttb,llist2,dr,h(1,1,ja-ja0,ic),dea,scfcut)
+
+!             end if
+!             print *,'h:',h(1:3,1:3,ja-ja0,ic)
+            ja = ja+1
+         enddo
+
+      enddo
+
+      if (t1 /= t2) then
+         write(*,'(" *** ERROR -> T1<>T2 ***")')
+         write(*,'(2I8)') t1,t2
+      endif
+      if (t3 /= t4) then
+         write(*,'(" *** ERROR -> T3<>T4 ***")')
+         write(*,'(2I8)') t3,t4
+      endif
+
+      end
+

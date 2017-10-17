@@ -1,0 +1,39 @@
+
+Prerequisites:
+   
+   scons : for building. Recent linux distributions usually provide it. If it is not available,
+      a selfcontained version is bundled. Last resort: http://www.scons.org/
+   
+   spglib: only for symmetry in k-space TB. If not available in the system repositories see:
+         http://build.opensuse.org/package/show?package=spglib&project=home:pashov_d 
+         http://spglib.sourceforge.net/
+      It can be disabled by adding '-D NOSYM' to the 'fflags' field in flags.makefile 
+   
+   mpi : only used in the parallel executable. openmpi, mpich2, and intel's mpi have been tested.
+
+   
+Compilation:
+   
+   1. Create a flags.makefile file in a preferably empty folder designated for building. Examples are provided for gfortran and ifort. 
+      If an mpi library is not available comment out the field 'mpifc' or leave it empty.
+      
+   2. To build everything issue 'scons -Y /path/to/pb'. Execute 'alias scons=/path/to/scons' before this if the budled version is used.
+      To build significantly faster on multicore/thread system append -j "number of compilation processes".
+      To build only certain files specify them explicitly on the command line.
+      
+Example:
+   Assumig openmpi and recent gfortran are available a simple setup may be:
+   
+      tar -xvf pb.tbz2
+      cd pb/
+      bpth=$(pwd)
+      mkdir -p bld/g/o
+      cd bld/g/o
+      ln -fs ${bpth}/flags.gfortran.opt.makefile flags.makefile
+      ${bpth}/scons-2.2.0/scons -Y $bpth -j 32
+   
+   There are two examples of input files of dislocation and nudged elastic band relaxations in the folder 'fe'.
+
+
+      
+      

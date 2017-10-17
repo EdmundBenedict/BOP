@@ -1,0 +1,178 @@
+
+   subroutine forcebop()
+      
+      use mod_precision
+      use mod_all_scalar
+      use mod_const
+      use ab_io
+      use mod_ham, only : grad
+      use mod_chi
+      use mod_funptr
+      use topologia, only : iproc, mpmap, aproc, master
+!       use mod_atom_ar, only : btype
+
+#ifdef MPI
+      use mpi
+#endif      
+   !
+   !    This is a subroutine to evaluate the bond contribution to the
+   !     band structure energy, and the band structure forces.
+   !
+
+      implicit none
+
+
+      include "Include/Atom.array"
+      include "Include/Force.array"
+      include "Include/Moment.array"
+      include "Include/NebList.array"
+      include "Include/PosVel.array"
+
+      real(dp) :: bondeng,hopint
+
+      integer i,j,nmax
+      integer nla,nlb
+      integer ia,ib,la,lb, mib
+      integer nstta,nsttb
+      integer za,zb
+      integer ja,ja0
+      integer lla,lla0,nma,ma
+
+   !
+   !    Declare the local arrays.
+   !
+
+   !*** A displacement vector.
+      real(dp) :: dr(3)
+   !*** Forces.
+      real(dp) :: fab(3), dfab(3)
+   !*** Screening function
+      real(dp) :: scf(14), scfcut(14),dsf(14,3)
+
+      integer :: ierr, isp, p
+      real(dp) :: hbo, dhbo
+      
+      fbs(:,:nd) = 0.0_dp
+      dmdl(:,:nd) = 0.0_dp
+      rdfbs = 0.0_dp
+
+      do isp = 1, nsp
+         do ia = mpmap(iproc)+1, mpmap(iproc+1)
+            
+            call assoc_ab(ia,isp)
+            call assoc_chi(ia,isp)
+            
+            za = z(ia)
+            call states(za,nla,nstta,llista)
+
+            if (momflg == 1) then
+               lla0 = 0
+               do la = 1,nla
+                  nma = 2*llista(la) + 1
+                  mlista(lla0+1:lla0+nma) = la
+                  lla0 = lla0 + nma
+               enddo
+            else
+               mlista(1:nstta) = la
+            endif
+
+            ! Calculate the chi derivatives, needed for dmdl only
+            do la = 1,nchain
+               nmax = lchain(la)
+               if (term == 1) then
+                  call dchisr(lef,nmax+1,la)
+               else if ((term == 2).or.(term == 3)) then
+                  call dchinl(lef,nmax,mrec,dchia(0,la), & 
+                              & dchib(0,la),diag(1,la), & 
+                              & eigvec(1,1,la),kt)
+               end if
+            end do
+            
+            
+         !    For each neighbor ....
+
+            ja0 = aptr(ia) - 1
+            p = 1
+            ib = bptr(p+ja0)          
+            do while (ib /= eol)
+               if (ia /= ib) then
+                  zb = z(ib)
+                  call states(zb,nlb,nsttb,llistb)
+
+                  dr = ad(:,ia) - ad(:,ib)
+
+                  if (scf_include == 0) then
+                     scfcut = 1.0_dp
+                     dsf = 0.0_dp
+                  else
+                     call screenf(ia,ib,scf)
+                     call scrcut(scf,scfcut)
+                     call dscreenf(ia,ib,scf,dsf)
+                  endif
+
+                  mib = map(ib)
+                  
+                  call grdmat(grad,dr,za,zb,scfcut,dsf)
+
+                  if (momflg == 2) call utranv(transm(1,1,ia),grad,transm(1,1,mib),trwork,mxnstat,nstta,nsttb)
+
+   ! may be done with dot_product instead sum   
+                                 
+                  fab  = 0.0_dp
+                  dfab = 0.0_dp
+
+                  do la = 1,nstta
+                     ma = mlista(la)
+                     nmax = lchain(ma)
+                     do lb = 1, nsttb
+                        
+                        hbo =    sum(chia(0:nmax,ma) * darec(0:nmax,la,lb,p)) &
+                           & + 2*sum(chib(1:nmax,ma) * dbrec(1:nmax,la,lb,p)) 
+                        if (term == 1) hbo = hbo + 2*chib(nmax+1,ma)*dbrec(nmax+1,la,lb,p)
+                        
+                        fab = fab + hbo * grad(:,la,lb)
+                        
+                     
+                        dhbo =  sum(dchia(0:nmax,ma) * darec(0:nmax,la,lb,p)) &
+                        & + 2*sum(dchib(1:nmax,ma) * dbrec(1:nmax,la,lb,p)) 
+                        if (term == 1) dhbo = dhbo + 2*dchib(nmax+1,ma)*dbrec(nmax+1,la,lb,p)
+                        
+                        dfab = dfab + dhbo * grad(:,la,lb)
+                     
+                     enddo
+                  enddo
+
+                  
+                  if (.not. mag) then 
+                     fab = 2*fab
+                     dfab = 2*dfab
+                  end if   
+                  
+                  if (mib /= 0) then
+                     fbs(:,ia) = fbs(:,ia) + fab
+                     fbs(:,mib) = fbs(:,mib) - fab
+                     
+                     dmdl(:,ia) = dmdl(:,ia) + dfab
+                     dmdl(:,mib) = dmdl(:,mib) - dfab
+                  else
+                     fbs(:,ia) = fbs(:,ia) + 2*fab
+                     dmdl(:,ia) = dmdl(:,ia) + 2*dfab
+                  endif
+                  
+                  rdfbs = rdfbs - sum(dr*fab)
+                  
+               endif
+               p = p + 1
+               ib = bptr(p+ja0)
+            enddo ! ib
+         end do ! ia
+      end do ! isp
+      
+#ifdef MPI
+      call mpi_allreduce(mpi_in_place,  fbs, 3*nd, mpi_real8, mpi_sum, mpi_comm_world, ierr)
+      call mpi_allreduce(mpi_in_place, dmdl, 3*nd, mpi_real8, mpi_sum, mpi_comm_world, ierr)
+      call mpi_allreduce(mpi_in_place, rdfbs,   1, mpi_real8, mpi_sum, mpi_comm_world, ierr)
+#endif      
+
+   end subroutine forcebop
+

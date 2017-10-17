@@ -1,0 +1,24 @@
+!
+!    Neighbor list information.
+!
+
+!*** The number of unit cells to include in each dimension.
+      integer rlim(3)
+
+!*** APTR is an array of pointers to the neighbor list.
+      integer aptr(mxtotnd)
+
+!*** BPTR is the neighbor list.
+      integer bptr(mxnb)
+
+!*** MAP is an array linking the central cell atoms to their periodically
+!    repeated neighbors.
+      integer map(mxtotnd), mapi(mxtotnd)
+      
+
+!
+!    Declare the common blocks.
+!
+
+      common /nebint/rlim,aptr,bptr,map,mapi
+

@@ -1,0 +1,22 @@
+ 
+
+!
+!    Forces on atoms.
+!
+
+!*** Forces.
+      real(dp) :: fbs(3,mxnd)
+      real(dp) :: fpp(3,mxnd)
+      real(dp) :: ftot(3,mxnd)
+      real(dp) :: newftot(3,mxnd)
+      real(dp) :: dmdl(3,mxnd)
+      real(dp) :: dad(3,mxnd)
+      real(dp) :: band_forces(3,mxnnb,mxnd)
+      real(dp) :: rep_forces(3,mxnnb,mxnd)
+
+!
+!    Declare the common blocks.
+!
+
+      common /force/fbs,fpp,ftot,newftot,dmdl,dad,band_forces,rep_forces
+

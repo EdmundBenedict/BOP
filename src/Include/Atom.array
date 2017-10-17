@@ -1,0 +1,85 @@
+!
+!    Other atomic data.
+!
+
+
+
+!*** Core charges.
+      real(dp) :: zc(0:mxz)
+
+!*** Onsite energies.
+      real(dp) :: es(0:mxz)
+      real(dp) :: ep(0:mxz)
+      real(dp) :: ed(0:mxz)
+
+!*** Stoner params
+      real(dp) :: istn(0:mxz)
+
+!*** Energy shifts.
+      real(dp) :: de(mxnd)
+      real(dp) :: dem(mxnd)  
+      
+!*** Bond data.
+      real(dp) :: bnddat(15,mbtype)
+
+!*** Bond integral scaling parameters
+      real(dp) :: bndscl(14,15,mbtype)
+
+!*** Bond integral screening functions
+      real(dp) :: scr(14,mxnd,mxnnb)
+      real(dp) :: nnbdr(3,mxnd,mxnnb)
+      integer nnbnd(mxnd)
+
+!*** Screening function flag
+      integer scf_include
+
+!*** Screening function cut-off
+      integer scf_cut
+
+!*** Embedding function coefficients
+      real(dp) :: embed(4,0:mxz)
+
+!*** Data for AVS (Atom radius, and colour).
+      real(dp) :: avs(4,0:mxz)
+
+!*** The atom move flags. 0 => NVE, 1 => NVT
+      integer amvflg(mxnd)
+
+!*** Basis set data.
+      integer nl(0:mxz)
+      integer nstt(0:mxz)
+      integer llist(ml,0:mxz)
+
+!*** The atom types.
+      integer atype(0:mxz)
+
+      
+!*** Atomic number.
+      integer z(mxtotnd)
+      integer newz(mxnd)
+      integer zinert(minert)
+
+!*** List of angular momentum values.
+      integer llista(ml)
+      integer mlista(mxnstat)
+      integer llistb(ml)
+
+!*** Chemical symbols.
+      character(len=2) :: listsymb(mxz)
+
+      
+      
+!
+!    Declare the common blocks.
+!
+
+      common /atmdp/de,dem,bnddat,bndscl,istn
+      common /atmint/atype,z,newz,zinert, &
+     &               llista,mlista,llistb,amvflg
+      common /zcom/zc
+      common /lcom/nl,nstt,llist
+      common /ecom/es,ep,ed
+      common /embcom/embed
+      common /avscom/avs
+      common /chmchr/listsymb
+      common /scrf/scr,nnbdr,nnbnd,scf_include,scf_cut

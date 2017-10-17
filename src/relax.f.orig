@@ -1,0 +1,294 @@
+      SUBROUTINE RELAX()
+
+C
+C    This is a subroutine to relax atomic configurations.
+C    RLXFLG = 1  ==> Variable metric relaxation
+C    RLXFLG = 2  ==> Steepest descent relaxation
+C    RLXFLG = 3  ==> Conjugate gradient relaxation
+C
+
+      IMPLICIT NONE
+
+C
+C    Include constants.
+C
+
+      INCLUDE "../Include/ALL.const"
+
+C
+C    Include scalars.
+C
+
+      INCLUDE "../Include/ALL.scalar"
+
+C
+C    Include arrays.
+C
+
+      INCLUDE "../Include/Atom.array"
+      INCLUDE "../Include/BEC.array"
+      INCLUDE "../Include/BondOrder.array"
+      INCLUDE "../Include/Force.array"
+      INCLUDE "../Include/Hamilt.array"
+      INCLUDE "../Include/Misc.array"
+      INCLUDE "../Include/Moment.array"
+      INCLUDE "../Include/NebList.array"
+      INCLUDE "../Include/NotSRT.array"
+      INCLUDE "../Include/PosVel.array"
+      INCLUDE "../Include/RecurCoef.array"
+      INCLUDE "../Include/Relax.array"
+      INCLUDE "../Include/SRT.array"
+
+C
+C    Declare the simple variables.
+C
+
+      DOUBLE PRECISION EIN,EOUT,ERED,U0
+      DOUBLE PRECISION ALPHA,MAXF,MAGF,DMU
+      DOUBLE PRECISION GD1,ALPHA1,ALPHA2,ALPHAU,ALPHAL
+      DOUBLE PRECISION GG,GGOLD,GAMMA
+
+      INTEGER USREXIT,STATUS
+      INTEGER I,J,FLAG
+      INTEGER ICOM,NSRCH
+
+      CHARACTER*80 FILENAME
+
+C
+C    Open the configuration file.
+C
+
+      IF (WRITEPER.GT.0) THEN
+         FILENAME = GENFILE(1:LENGFN)//'.dat'
+         OPEN(UNIT = 2,FILE = FILENAME,STATUS = 'NEW')
+         IF (DATFORM.EQ.1) THEN
+            WRITE(2,'(''no_of_atoms ='',I6)') ND
+            WRITE(2,'(''no_of_frames ='',I4)') (MXITER-NEQUIL)/WRITEPER
+            WRITE(2,'(''data ='')')
+         ENDIF
+      ENDIF
+
+C
+C    Initialize the Hessian matrix.
+C
+
+      IF (RLXFLG.EQ.1) THEN
+         IF (HESSMX.LT.3*ND) THEN
+            WRITE(6,'(''Increase the size of HESSMX to at least '',
+     +                I5)') 3*ND
+            CALL PANIC()
+         ENDIF
+         DO I = 1,3*ND,1
+            DO J = 1,3*ND,1
+               HESS(J,I) = 0.0D0
+            ENDDO
+            HESS(I,I) = 1.0D0
+         ENDDO
+      ELSEIF (RLXFLG.EQ.3) THEN
+         GGOLD = 0.0D0
+      ENDIF
+
+C
+C    Relax structure.
+C
+
+      ICOM = 0
+      STATUS = 0
+
+      WRITE(9,'(/''============================================'')')
+      IF (RLXFLG.EQ.1) THEN
+         WRITE(9,'(''Starting variable metric relaxation with:'')')
+      ELSEIF (RLXFLG.EQ.2) THEN
+         WRITE(9,'(''Starting steepest descent relaxation with:'')')
+      ELSEIF (RLXFLG.EQ.3) THEN
+         WRITE(9,'(''Starting conjugate gradient relaxation with:'')')
+      ENDIF
+      WRITE(9,'(''FTOL   = '',G12.5)') FTOL
+      WRITE(9,'(''MXITER = '',I5)')    MXITER
+      WRITE(9,'(''STPMIN = '',G12.5)') STPMIN
+
+      FLAG = 1
+      CALL GETETOT(FLAG)
+      CALL ERASAB()
+
+      EIN = EPROM + EBOND + EPAIR - EATOM - UENT
+      EOUT = EIN
+      U0   = EOUT + 0.5D0*UENT
+      ERED = 1.0D99
+
+      CALL CONSTR(FTOT,ND,CNST_A,CNST_V,CNST_N,MCNST_N)
+
+      MAXF = 0.0D0
+      DO I = 1,ND,1
+         MAGF = SQRT(FTOT(1,I)**2+FTOT(2,I)**2+FTOT(3,I)**2)
+         IF (MAGF.GT.MAXF) MAXF = MAGF
+      ENDDO
+
+      IF (RLXFLG.EQ.1) THEN
+         DO I = 1,ND,1
+            NEWFTOT(1,I) = -FTOT(1,I)
+            NEWFTOT(2,I) = -FTOT(2,I)
+            NEWFTOT(3,I) = -FTOT(3,I)
+         ENDDO
+      ENDIF
+
+      DO WHILE ((ITER.LE.MXITER).AND.(MAXF.GT.FTOL).AND.
+     +          (ICOM.NE.1).AND.(USREXIT().EQ.0).AND.
+     +          (STEP.GT.STPMIN).AND.(STATUS.EQ.0))
+
+         WRITE(6,'(/''Iteration #             '',I5)') ITER
+         WRITE(6,'(''Free energy, U(T=0) (start) = '',
+     +             2G22.12)') EIN,U0
+         WRITE(6,'(''Fermi energy (start)        = '',G12.5)') LEF
+         WRITE(6,'(''Number of electrons (start) = '',G12.5)') TOTNIA
+         WRITE(6,'(''Maximum force (start)       = '',G12.5)') MAXF
+
+         IF (RLXFLG.EQ.1) THEN
+            CALL MSTMIN(3*ND,3*MXND,HESS,NEWFTOT,FTOT,CG,NEWAD,
+     +                  STEP,0.0D0,ALPHA,ICOM,
+     +                  GD1,ALPHA1,ALPHA2,ALPHAU,ALPHAL,NSRCH,6)
+            IF (DNDM.GT.1.0D-6) THEN
+               DMU = (LOCC-TOTNIA)/DNDM
+               CALL MOVE(AD,ND,CG,ALPHA,DMDL,DMU)
+               LEF = LEF + DMU
+            ELSE
+               CALL MOVE(AD,ND,CG,ALPHA,DMDL,DMU)
+            ENDIF
+         ELSEIF (RLXFLG.EQ.2) THEN
+            IF (DNDM.GT.1.0D-6) LEF = LEF + (LOCC-TOTNIA)/DNDM
+            DO I = 1,ND,1
+               CG(1,I) = FTOT(1,I)
+               CG(2,I) = FTOT(2,I)
+               CG(3,I) = FTOT(3,I)
+               NEWAD(1,I) = AD(1,I)
+               NEWAD(2,I) = AD(2,I)
+               NEWAD(3,I) = AD(3,I)
+            ENDDO
+            CALL SAFEMIN(NEWAD,CG,EIN,EOUT,STATUS)
+         ELSEIF (RLXFLG.EQ.3) THEN
+            IF (DNDM.GT.1.0D-6) LEF = LEF + (LOCC-TOTNIA)/DNDM
+            GG = 0.0D0
+            DO I = 1,ND,1
+               GG = GG + FTOT(1,I)**2+FTOT(2,I)**2+FTOT(3,I)**2
+            ENDDO
+            IF ((ABS(GGOLD).LT.1.0D-6).OR.
+     +          (MOD(ITER,5).EQ.0)) THEN
+               GAMMA = 0.0D0
+            ELSE
+               GAMMA = GG/GGOLD
+            ENDIF
+            WRITE(6,'(''GAMMA = '',G12.5)') GAMMA
+            GGOLD = GG
+ 1          DO I = 1,ND,1
+               CG(1,I) = GAMMA*CG(1,I) + FTOT(1,I)
+               CG(2,I) = GAMMA*CG(2,I) + FTOT(2,I)
+               CG(3,I) = GAMMA*CG(3,I) + FTOT(3,I)
+               NEWAD(1,I) = AD(1,I)
+               NEWAD(2,I) = AD(2,I)
+               NEWAD(3,I) = AD(3,I)
+            ENDDO
+            CALL SAFEMIN(NEWAD,CG,EIN,EOUT,STATUS)
+            IF ((STATUS.EQ.1).AND.(ABS(GGOLD).GT.1.0D-6)) THEN
+               GGOLD = 0.0D0
+               GAMMA = 0.0D0
+               GOTO 1
+            ENDIF
+         ENDIF
+
+         IF (RLXFLG.EQ.1) THEN
+            FLAG = 2
+            CALL GETETOT(FLAG)
+            EOUT = EPROM + EBOND + EPAIR - EATOM - UENT
+            ERED = EIN-EOUT
+            IF (ERED.LT.0.0D0) THEN
+               WRITE(6,'(/''Energy increasing => Reducing step.'')')
+               WRITE(6,'(''Old step = '',G12.5)') STEP
+               STEP = STEP/2.0D0
+               WRITE(6,'(''New step = '',G12.5)') STEP
+            ELSE
+               WRITE(6,'(/''Energy decreasing => Increasing step.'')')
+               WRITE(6,'(''Old step = '',G12.5)') STEP
+               STEP = 1.1D0*STEP
+               WRITE(6,'(''New step = '',G12.5)') STEP
+            ENDIF
+            IF (ABS(LOCC-TOTNIA)/DBLE(ND).GT.0.001D0) THEN
+               FLAG = 1
+               CALL GETETOT(FLAG)
+            ENDIF
+            DO I = 1,ND,1
+               FTOT(1,I) = -FTOT(1,I)
+               FTOT(2,I) = -FTOT(2,I)
+               FTOT(3,I) = -FTOT(3,I)
+            ENDDO
+            EOUT = EPROM + EBOND + EPAIR - EATOM - UENT
+         ENDIF
+
+         U0   = EOUT  + 0.5D0*UENT
+
+         CALL CONSTR(FTOT,ND,CNST_A,CNST_V,CNST_N,MCNST_N)
+
+         MAXF = 0.0D0
+         DO I = 1,ND,1
+            MAGF = SQRT(FTOT(1,I)**2+FTOT(2,I)**2+FTOT(3,I)**2)
+            IF (MAGF.GT.MAXF) MAXF = MAGF
+         ENDDO
+
+         WRITE(6,'(''Free energy, U(T=0) (finish) = '',2G22.12)')EOUT,U0
+         WRITE(6,'(''Fermi energy (finish)        = '',G12.5)') LEF
+         WRITE(6,'(''Number of electrons (finish) = '',G12.5)') TOTNIA
+         WRITE(6,'(''Maximum force (finish)       = '',G12.5)') MAXF
+
+         EIN = EOUT
+         ITER = ITER + 1
+
+         IF ((WRITEPER.GT.0).AND.(ITER.GT.NEQUIL)) THEN
+            IF (MOD(ITER,WRITEPER).EQ.0) THEN
+               IF (DATFORM.EQ.1) THEN
+                  DO I = 1,ND,1
+                     WRITE(2,'(3(E10.5,1X),4(E7.2,1X))')
+     +                    AD(1,I),AD(2,I),AD(3,I),
+     +                    AVS(1,Z(I)),AVS(2,Z(I)),
+     +                    AVS(3,Z(I)),AVS(4,Z(I))
+                  ENDDO
+               ELSE
+                  WRITE(2,'(I6)') ND
+                  WRITE(2,'(A)') ' '
+                  DO I = 1, ND, 1
+                     WRITE(2,'(A,3F12.5)') SYMB(I),
+     +                    AD(1,I),AD(2,I),AD(3,I)
+                  ENDDO
+               ENDIF
+            ENDIF
+         ENDIF
+
+         IF (AUTOSAVE.GT.0) THEN
+            IF (MOD(ITER,AUTOSAVE).EQ.0) CALL DUMP()
+         ENDIF
+
+      ENDDO
+
+      IF (RLXFLG.EQ.1) THEN
+         DO I = 1,ND,1
+            FTOT(1,I) = -FTOT(1,I)
+            FTOT(2,I) = -FTOT(2,I)
+            FTOT(3,I) = -FTOT(3,I)
+         ENDDO
+      ENDIF
+
+      WRITE(9,'(''Stopping relaxation with:'')')
+      IF ((ICOM.EQ.1).OR.(MAXF.LT.FTOL)) THEN
+         WRITE(9,'(''Relaxation successfully completed.'')')
+      ELSEIF (ITER.GT.MXITER) THEN
+         WRITE(9,'(''Maximum number of iterations exceeded.'')')
+      ELSEIF (STEP.LT.STPMIN) THEN
+         WRITE(9,'(''Minimum step size reached.'')')
+      ELSEIF (STATUS.EQ.1) THEN
+         WRITE(9,'(''Forces not consistent with energy.'')')
+      ENDIF
+      WRITE(9,'(''Maximum force = '',G12.5,''eV/A'')') MAXF
+      WRITE(9,'(''============================================''/)')
+
+      IF (WRITEPER.GT.0) CLOSE(2)
+
+      END
+

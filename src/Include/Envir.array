@@ -1,0 +1,18 @@
+ 
+      real(dp) ::  aenv(4), adel(4), abenv(4), abdel(4)
+      real(dp) ::  benv(4), bdel(4)
+      common /envir/    aenv, adel, abenv, abdel, benv, bdel
+
+      real(dp) :: arep(6,2), brep(6,2), acoh(2,2)
+      real(dp) :: bcoh(2,2), abrep(6,2)		
+      common  /input/  arep,  brep, acoh,  bcoh,  abrep  
+
+      real(dp) :: alatt, blatt, ablat
+      common  /lattz/  alatt, blatt, ablat
+
+
+      real(dp) :: acore(5), bcore(5), abcore(5)
+      common  /cores/  acore, bcore, abcore
+
+      character*50 atitle,btitle,title
+      common /fstitles/ atitle,btitle,title

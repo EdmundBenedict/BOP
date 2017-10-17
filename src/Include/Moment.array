@@ -1,0 +1,27 @@
+ 
+!
+!    Moment information.
+!
+
+!*** Products of Hamiltonian into starting vectors.
+!     DOUBLE PRECISION SSHNU(MXNSTAT,MXCLS,MXNSTAT,2)
+
+!*** Onsite moments of the Hamiltonian.
+!     DOUBLE PRECISION MU(2*MREC+2,MXNSTAT,MXND)
+!     DOUBLE PRECISION MUBAR(0:2*MREC+2)
+
+!*** Interference terms.
+      real(dp) :: zeta(0:2*mrec+2,mxnstat,mxnnb,mxnstat)
+
+!*** Transformation matrix. Indices: Basis state index, Transformed state index, Atom index.
+      real(dp) :: transm(mxnstat,mxnstat,0:mxnd)
+
+!*** Work space for unitary transformation
+      real(dp) :: trwork(mxnstat,mxnstat)
+
+!
+!    Declare the common blocks.
+!
+
+      common /momdp/transm,trwork,zeta
+

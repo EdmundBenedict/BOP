@@ -1,0 +1,29 @@
+ 
+
+!
+!    Relaxation information.
+!
+
+!*** Constraint vectors.
+      real(dp) :: cnst_v(3,mcnst_n)
+
+!*** Hessian matrix
+      real(dp) :: hess(hessmx,hessmx)
+
+!*** The conjugate gradient.
+      real(dp) :: cg(3,mxnd)
+
+!*** Indices for constrained atoms.
+      integer cnst_a(mcnst_n)
+
+!*** Whether elastic constants are to be calculated including
+!*** structural relaxation (MJC 2/11/04)
+      integer elplusrel
+
+!
+!    Declare the common blocks.
+!
+      common /elrel/elplusrel
+      common /relint/cnst_a
+      common /reldp/cnst_v,hess,cg
+

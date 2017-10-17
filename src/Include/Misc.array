@@ -1,0 +1,49 @@
+!
+!    Miscellaneous
+!
+
+
+!*** Green's functions.
+      double complex g0n(0:mrec+2)
+!*** The energy grid and its FFT for an energy scan.
+      double complex grdeng(mgrid,mgrid,mgrid)
+      double complex fftwk(mgrid)
+
+!*** The occupancies and fermi energies for the energy versus occupancy curves.
+      real(dp) :: multocc(mfermi)
+      real(dp) :: multef(mfermi)
+!*** Displacement of diffusing atom.
+      real(dp) :: disp_vec(3)
+!*** The limits of the grid used in the energy scan.
+      real(dp) :: gridlo(3)
+      real(dp) :: gridhi(3)
+
+!*** The number of points in eachdimension of the grid used for an energy scan.
+      integer ngrid(3)
+!*** Histogram.
+      integer gr_bins(mbins)
+      integer g3_bins(mbins)
+      integer sw_bins(mbins)
+!*** Atom and state numbers for the local density of states
+!     INTEGER XA_LDOS_IA(MXLDOS)
+!     INTEGER XA_LDOS_LA(MXLDOS)
+!*** Order parameter.
+      real(dp) :: latparam
+      real(dp) :: kcpt(3)
+!*** Mean squared displacement
+      real(dp) :: admsda(3)
+
+!*** Chemical symbols
+      character*2 symb(mxnd)
+      character*2 symi(minert)
+
+
+!
+!    Declare the common blocks.
+!
+
+      common /misdc/g0n,grdeng,fftwk
+      common /misdp/multocc,multef,disp_vec, latparam,kcpt,admsda, &
+     &              gridlo,gridhi
+      common /misint/gr_bins,g3_bins,sw_bins,ngrid
+      common /mischar/symb,symi

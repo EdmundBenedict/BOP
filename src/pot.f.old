@@ -1,0 +1,816 @@
+*****************************************************************************
+*                                                                           *
+*                                                                           *
+*                             Alexey Girshick                               *
+*              Department of Materials Science and Engineering              *
+*                        University of Pennsylvania                         *
+*                                                                           *
+*                                                                           *
+*****************************************************************************
+*                                                                           *
+*                                                                           *
+*   This file is a set of subroutines (due to G.J. Ackland) which read in   *
+*   Finnis-Sinclair potentials and calculate values of these potentials and *
+*   their deivatives. Potentials functions are taken form Graeme's file     *
+*   "potsdp.f".                                                             *
+*   It is all done in units of angstroms, nothing about lattice parameters! *
+*                                                                           *
+*   Therefore those subroutines are inconsistent with relaxation programs   *
+*   and other Finnis_sinclair programs. They are good only for purposes of  *
+*   STAB1, STAB11 and STAB31, where they are used.                          *
+*                                                                           *
+*   They are later modified by Alexey Girshick in June 1995, in Oxford.     *
+*                                                                           *
+*                                                                           *
+*****************************************************************************
+
+
+      SUBROUTINE  POTENTIAL
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+C
+C    Include constants.
+C
+
+      INCLUDE "../Include/ALL.const"
+
+C
+C    Include scalars.
+C
+
+      INCLUDE "../Include/ALL.scalar"
+   
+*
+*    Common blocks introduced by A.Girshick.
+*    
+ 
+      INCLUDE "../Include/ag.conn"
+
+      IF ( POT_SCL .EQ. 0 ) THEN 
+          CALL POTNOSCL(ENV_INCLUDE)
+      ELSE IF ( POT_SCL .EQ. 1 ) THEN
+          CALL POTSCLD( )
+      ELSE
+          WRITE ( 6, '(//"Wrong value of parameter POT_SCL"//)')
+      ENDIF
+
+
+      RETURN
+      END
+
+***********************************************************************
+
+      SUBROUTINE  POTNOSCL(EFLAG)
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      CHARACTER*50 ATITLE,BTITLE,TITLE
+      INTEGER  EFLAG
+      EXTERNAL DABS
+
+      
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),  
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )   
+      COMMON  /LATTZ/  ALATT, BLATT, ABLAT  
+      COMMON  /ROOTS/  RT2, RT3
+      COMMON  /CORES/  ACORE( 5 ), BCORE( 5 ), ABCORE( 5 )
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+
+
+
+*  Read in the A-A potential. 
+
+      READ (12,2) ATITLE
+      READ (12,*) AREP
+      READ (12,*) ACOH
+      READ (12,*) ACORE
+      IF ( EFLAG .EQ. 1 )  THEN
+           READ (12,*) AENV
+           READ (12,*) ADEL
+      ENDIF
+
+*  Read in the B-B potential.
+
+      READ (13,2) BTITLE
+      READ (13,*) BREP
+      READ (13,*) BCOH
+      READ (13,*) BCORE
+      IF ( EFLAG .EQ. 1 )  THEN
+      READ (13,*) BENV
+      READ (13,*) BDEL
+      ENDIF
+
+*  Read in the A-B potential.
+
+      READ (14,2) TITLE
+      READ (14,*) ABREP 
+      READ (14,*) ABCORE
+      IF ( EFLAG .EQ. 1 )  THEN
+           READ (14,*) ABENV
+           ABENV(1) = DSQRT ( AENV(1) * BENV(1) )
+           ABENV(2) = 0.5D0 * ( AENV(2) + BENV(2) )
+           ABENV(3) = 0.5D0 * ( AENV(3) + BENV(3) )
+      ENDIF
+
+
+ 2    FORMAT ( A50 )
+      
+
+      RT2 = DSQRT(2.0D0)
+      RT3 = DSQRT(3.0D0)
+
+
+      RETURN
+      END
+
+**********************************************************************
+
+      SUBROUTINE  POTSCLD
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      CHARACTER*50 ATITLE,BTITLE,TITLE
+      EXTERNAL DABS
+
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),  
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )   
+      COMMON  /LATTZ/  ALATT, BLATT, ABLAT  
+      COMMON  /ROOTS/  RT2, RT3
+      COMMON  /CORES/  ACORE( 5 ), BCORE( 5 ), ABCORE( 5 )
+
+
+*  Read in the A-A potential. 
+
+      READ (12,2) ATITLE
+      READ (12,*) AREP
+      READ (12,*) ACOH
+      READ (12,*) ALATT
+
+
+*  Read in the B-B potential.
+
+      READ (13,2) BTITLE
+      READ (13,*) BREP
+      READ (13,*) BCOH
+      READ (13,*) BLATT
+
+
+*  Read in the A-B potential.
+
+      READ (14,2) TITLE
+      READ (14,*) ABREP 
+      READ (14,*) ABLAT
+
+
+ 2    FORMAT ( A50 )
+
+
+*  Rescale input to allow distances in Angstroms as input to VPOT, SPOT
+*  Cross potetnial is in the right units from the very beginning.
+
+      DO  ISCAL = 1, 6
+          BREP( ISCAL, 1 ) = BREP( ISCAL, 1 ) / BLATT**3
+          BREP( ISCAL, 2 ) = BREP( ISCAL, 2 ) * BLATT
+          AREP( ISCAL, 1 ) = AREP( ISCAL, 1 ) / ALATT**3
+          AREP( ISCAL, 2 ) = AREP( ISCAL, 2 ) * ALATT
+          IF( ISCAL .LT. 3 )  THEN
+              ACOH( ISCAL, 1 ) = ACOH( ISCAL, 1 ) / ALATT**3
+              ACOH( ISCAL, 2 ) = ACOH( ISCAL, 2 ) * ALATT
+              BCOH( ISCAL, 1 ) = BCOH( ISCAL, 1 ) / BLATT**3
+              BCOH( ISCAL, 2 ) = BCOH( ISCAL, 2 ) * BLATT
+           ENDIF
+      ENDDO
+
+
+      DO I = 1, 5
+          ACORE( I )  = 0.0D0
+          BCORE( I )  = 0.0D0
+          ABCORE( I ) = 0.0D0
+      ENDDO
+
+
+      RT2 = DSQRT(2.0D0)
+      RT3 = DSQRT(3.0D0)
+
+
+      RETURN
+      END
+
+********************************************************************************
+
+c  File contains a number of different functions used with
+C  FS - type three point spline 6-2 potentials (as per ATVF)
+c  It needs to be compiled and linked to almost all the
+c  programs evaluating structures in ~/alloy/
+
+
+
+C this function evaluates the derivative
+C of the interspecies cohesive function
+
+      FUNCTION DABS( X )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )
+
+      DABS = 0.0
+      IF (X.GT.ACOH(1,2)) GOTO 1
+      IF (X.GT.BCOH(1,2)) GOTO 1
+      TOP=(SPOT(X,ACOH)*DSPOT(X,BCOH)+DSPOT(X,ACOH)*SPOT(X,BCOH))
+      BOTTOM = (2.0*SQRT(SPOT(X,ACOH)*SPOT(X,BCOH)))      
+      IF(BOTTOM.GT.1E-20) DABS=TOP/BOTTOM
+ 1    CONTINUE
+      RETURN
+      END
+
+
+c  this function evaluates the environmentally dependent pair interaction
+
+      FUNCTION VPOTENV( X, ENV, CORE, DELAM )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION ENV(4), CORE(5)    
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+
+      VPOTENV=0.0
+
+C      RPOM = ADEL(4)
+C      DPOM = RPOM - ENV(4)
+C     
+C      FPOM = (ENV(1)/RPOM) * DEXP( - (ENV(2)+DELAM) *
+C     &            (RPOM - 2*ENV(3))) 
+C
+C      FDPOM = - FPOM * ( (ENV(2)+DELAM) + 1/RPOM)
+C
+C      
+C      APOM = ( FDPOM * DPOM - 2 * FPOM)/(DPOM**3.0D0)
+C      
+C      BPOM = ( 3 * FPOM - FDPOM * DPOM)/(DPOM**2.0D0)
+
+
+
+      IF(X .GT. ENV(4)) GOTO 100
+C      IF(X.GT. RPOM ) THEN
+C       VPOTENV = APOM * ( X - ENV(4))**3.0D0 +
+C     &           BPOM * ( X - ENV(4))**2.0D0
+C       GOTO 100
+C      ENDIF
+      
+
+         VPOTENV =  (ENV(1)/X) * DEXP( - (ENV(2)+DELAM) * 
+     &            (X - 2*ENV(3))) 
+    
+
+ 100  CONTINUE
+      RETURN
+      END
+
+
+c  this function evaluates the force for the spline part 
+c  of the environmental term
+     
+      FUNCTION FES( X, ENV, DEL, DELAM, DDELAM )
+      
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION ENV(4), DEL(4)
+      
+C      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+C     &                 ADEL(4), BDEL(4), ABDEL(4)
+       
+      FES = 0.D0
+       
+      RPOM = DEL(4)
+      DPOM = RPOM - ENV(4)
+      
+      FPOM = (ENV(1)/RPOM) * DEXP( - (ENV(2)+DELAM) *
+     &            (RPOM - 2*ENV(3)))
+      FDPOM = - FPOM * ( (ENV(2)+DELAM) + 1/RPOM)
+         
+      APOM = ( FDPOM * DPOM - 2 * FPOM)/(DPOM**3.0D0)
+      BPOM = ( 3 * FPOM - FDPOM * DPOM)/(DPOM**2.0D0)
+    
+
+      D_FPOM = (ENV(1)/RPOM) * DEXP( - (ENV(2)+DELAM) *
+     &         (RPOM - 2*ENV(3)))*(-DDELAM)*(ENV(2)+DELAM)
+      D_FDPOM = - D_FPOM * ( (ENV(2)+DELAM) + 1/RPOM)
+     &          - FPOM * DDELAM
+ 
+      D_APOM = (D_FDPOM * DPOM - 2 * D_FPOM)/(DPOM**3.0D0)
+      D_BPOM = ( 3 * D_FPOM - D_FDPOM * DPOM)/(DPOM**2.0D0)      
+
+C      write(6,'(2f12.10)') apom, bpom
+C      write(6,'(2f12.10)') d_apom, d_bpom
+      
+       FES = D_APOM * ( X - ENV(4))**3.0D0 +
+     &       3 * APOM * ( X - ENV(4))**2.0D0 +
+     &       D_BPOM * ( X - ENV(4))**2.0D0 +
+     &       2 * BPOM * ( X - ENV(4))
+
+C      write(6,'(2f12.10)') x, fes
+
+      RETURN
+      END
+
+
+
+c  this function evaluates the pairwise repulsive part of the FS-potential
+      
+      FUNCTION VPOT( X, REP, CORE )
+         
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION REP(6,2), CORE(5)
+      VPOT=0.0
+
+      IF( X .LT. CORE(1) ) THEN
+          VPOT = CORE(2) * DEXP( CORE(3) * ( CORE(1)-X ) ) *
+     &           ( CORE(1)-X )**CORE(5) / ( X**CORE(4) )
+      ENDIF
+          
+      IF(X.GT.REP(1,2)) GOTO 100
+       VPOT=REP(1,1)*(REP(1,2)-X)**3 + VPOT
+      IF(X.GT.REP(2,2)) GOTO 100
+       VPOT=REP(2,1)*(REP(2,2)-X)**3 + VPOT
+      IF(X.GT.REP(3,2)) GOTO 100
+       VPOT=REP(3,1)*(REP(3,2)-X)**3 + VPOT
+      IF(X.GT.REP(4,2)) GOTO 100
+       VPOT=REP(4,1)*(REP(4,2)-X)**3 + VPOT
+      IF(X.GT.REP(5,2)) GOTO 100
+       VPOT=REP(5,1)*(REP(5,2)-X)**3 + VPOT
+      IF(X.GT.REP(6,2)) GOTO 100
+       VPOT=REP(6,1)*(REP(6,2)-X)**3 + VPOT
+ 100  CONTINUE
+      
+      RETURN
+      END
+
+c  this function evaluates the repulsive core
+c  it serves only for drawing purposes
+      
+      FUNCTION VCORE( X, IPICK )
+      
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON  /CORES/  ACORE( 5 )
+      VCORE=0.0 
+
+      IF( X .LT. ACORE(1) ) THEN
+          VCORE = ACORE(2) * DEXP( ACORE(3) * ( ACORE(1)-X ) ) *
+     &           ( ACORE(1)-X )**ACORE(5) / ( X**ACORE(4) )
+      ENDIF
+
+      RETURN
+      END
+
+
+c  this function evaluates the first differential of the
+c   pairwise repulsive part of the FS-potential with
+C  respect to the input distance X
+
+      FUNCTION DVPOT( X, REP, CORE )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION REP(6,2), CORE(5)    
+      DVPOT=0
+
+      IF( X .LT. CORE(1) ) THEN
+          DVPOT = CORE(2) * DEXP( CORE(3) * ( CORE(1)-X ) ) *
+     &            ( CORE(1)-X )**CORE(5) / ( X**CORE(4) )
+
+          DVPOT = DVPOT * (   - CORE(3) - ( CORE(4) / X ) -
+     &                        ( CORE(5) / ( CORE(1) - X ) )   )
+      ENDIF
+
+      IF(X.GT.REP(1,2)) GOTO 100
+       DVPOT=-3.0*REP(1,1)*(REP(1,2)-X)**2 + DVPOT
+      IF(X.GT.REP(2,2)) GOTO 100
+       DVPOT=-3.0*REP(2,1)*(REP(2,2)-X)**2 + DVPOT
+      IF(X.GT.REP(3,2)) GOTO 100
+       DVPOT=-3.0*REP(3,1)*(REP(3,2)-X)**2 + DVPOT
+      IF(X.GT.REP(4,2)) GOTO 100
+       DVPOT=-3.0*REP(4,1)*(REP(4,2)-X)**2 + DVPOT
+      IF(X.GT.REP(5,2)) GOTO 100
+       DVPOT=-3.0*REP(5,1)*(REP(5,2)-X)**2 + DVPOT
+      IF(X.GT.REP(6,2)) GOTO 100
+       DVPOT=-3.0*REP(6,1)*(REP(6,2)-X)**2 + DVPOT
+ 100  CONTINUE
+
+      RETURN
+      END
+
+
+c  this function evaluates the pairwise cohesive part of the FS-potential
+
+      FUNCTION SPOT( X, COH )
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION COH(2,2)
+      SPOT=0
+      IF(X.GT.COH(1,2)) GOTO 100
+       SPOT=COH(1,1)*(COH(1,2)-X)**3
+      IF(X.GT.COH(2,2)) GOTO 100
+       SPOT=COH(2,1)*(COH(2,2)-X)**3 + SPOT
+ 100  CONTINUE
+
+      RETURN
+      END
+
+
+
+C    this function evaluates the first derivative of
+C    the pairwise cohesive part of the FS-potential
+
+      FUNCTION DSPOT(X,COH)
+
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      DIMENSION COH(2,2)
+
+      DSPOT=0
+      IF(X.GT.COH(1,2)) GOTO 100
+       DSPOT=-3.0*COH(1,1)*(COH(1,2)-X)**2
+      IF(X.GT.COH(2,2)) GOTO 100
+       DSPOT=-3.0*COH(2,1)*(COH(2,2)-X)**2 + DSPOT
+ 100  CONTINUE
+      
+      RETURN
+      END
+
+
+*******************************************************************************
+*
+*  The functions below added to the package to create some kind of uniform
+*  interface for using these potetnial functions, like one which is used
+*  in the relaxation program: every function has 2 parameters, and it
+*  decides what to do based on IPICK, which has to be supplied as an input.
+*  The reason we are using these functions above is that they work in units
+*  of angstroms.
+*
+*******************************************************************************
+
+
+      DOUBLE PRECISION FUNCTION  PHI( R, IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      EXTERNAL SPOT
+
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )
+
+      IF      ( IPICK .EQ. 0 )  THEN
+          PHI = SPOT( R, ACOH )
+      ELSE IF ( IPICK .EQ. 1 )  THEN 
+          PHI = DSQRT( SPOT( R, ACOH ) * SPOT( R, BCOH ) )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          PHI = SPOT( R, BCOH )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+
+      RETURN
+      END
+
+
+
+      DOUBLE PRECISION FUNCTION  CHI( R, IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+
+      CHI = 0.0D0
+
+      IF      ( IPICK .EQ. 0 )  THEN
+
+        RPOM = ADEL(4)
+        IF(R.GT. AENV(4)) GOTO 100
+        IF(R.GT. RPOM) THEN
+          DPOM = RPOM - AENV(4)
+          FPOM = ADEL(1)*DEXP( - RPOM * ADEL(2) )
+          FDPOM = - ADEL(2) * FPOM
+          FD2POM = -ADEL(2) * FDPOM
+
+          APOM = ( FD2POM * DPOM * DPOM - 6 * DPOM * FDPOM
+     &             + 12 * FPOM ) / (2*DPOM**5.0D0)
+          BPOM = ( 7 * DPOM * FDPOM - FD2POM * DPOM * DPOM
+     &             - 15 * FPOM ) / (DPOM**4.0D0)
+          CPOM = ( FD2POM * DPOM * DPOM - 8 * DPOM * FDPOM
+     &             + 20 * FPOM) / (2*DPOM**3.0D0)
+
+
+          CHI  = APOM * ( R - AENV(4))**5.0D0 +
+     &           BPOM * ( R - AENV(4))**4.0D0 +
+     &           CPOM * ( R - AENV(4))**3.0D0
+
+          GOTO 100
+        ENDIF
+        CHI = ADEL(1)*DEXP( - R * ADEL(2) ) 
+
+      ELSE IF ( IPICK .EQ. 1 )  THEN 
+
+        RPOM = BDEL(4)
+        IF(R.GT. BENV(4)) GOTO 100  
+        IF(R.GT. RPOM) THEN
+          DPOM = RPOM - BENV(4)
+          FPOM = BDEL(1)*DEXP( - RPOM * BDEL(2) )
+          FDPOM = - BDEL(2) * FPOM
+          FD2POM = -BDEL(2) * FDPOM
+          
+          APOM = ( FD2POM * DPOM * DPOM - 6 * DPOM * FDPOM
+     &             + 12 * FPOM ) / (2*DPOM**5.0D0)
+          BPOM = ( 7 * DPOM * FDPOM - FD2POM * DPOM * DPOM
+     &             - 15 * FPOM ) / (DPOM**4.0D0)
+          CPOM = ( FD2POM * DPOM * DPOM - 8 * DPOM * FDPOM
+     &             + 20 * FPOM) / (2*DPOM**3.0D0)
+
+        
+          CHI  = APOM * ( R - BENV(4))**5.0D0 +
+     &           BPOM * ( R - BENV(4))**4.0D0 +
+     &           CPOM * ( R - BENV(4))**3.0D0
+
+          GOTO 100  
+        ENDIF
+        CHI = BDEL(1)*DEXP( - R * BDEL(2) )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+ 100  CONTINUE
+
+      RETURN 
+      END
+
+
+* first derivative of CHI with respect to R
+
+      DOUBLE PRECISION FUNCTION  DCHI( R, IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+         
+      DCHI = 0.0D0
+       
+      IF      ( IPICK .EQ. 0 )  THEN
+      
+        RPOM = ADEL(4)
+        IF(R.GT. AENV(4)) GOTO 100
+        IF(R.GT. RPOM) THEN
+          DPOM = RPOM - AENV(4)
+          FPOM = ADEL(1)*DEXP( - RPOM * ADEL(2) )
+          FDPOM = - ADEL(2) * FPOM
+          FD2POM = -ADEL(2) * FDPOM
+
+          APOM = ( FD2POM * DPOM * DPOM - 6 * DPOM * FDPOM
+     &             + 12 * FPOM ) / (2*DPOM**5.0D0)
+
+          BPOM = ( 7 * DPOM * FDPOM - FD2POM * DPOM * DPOM
+     &             - 15 * FPOM ) / (DPOM**4.0D0)
+          CPOM = ( FD2POM * DPOM * DPOM - 8 * DPOM * FDPOM
+     &             + 20 * FPOM) / (2*DPOM**3.0D0)
+
+          DCHI  = 5 * APOM * ( R - AENV(4) )**4.0D0 +
+     &            4 * BPOM * ( R - AENV(4) )**3.0D0 + 
+     &            3 * CPOM * ( R - AENV(4) )**2.0D0
+
+          GOTO 100
+        ENDIF
+        DCHI = -ADEL(2)*ADEL(1)*DEXP( - R * ADEL(2) )
+      
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+     
+        RPOM = BDEL(4)
+        IF(R.GT. BENV(4)) GOTO 100  
+        IF(R.GT. RPOM) THEN
+          DPOM = RPOM - BENV(4)
+          FPOM = BDEL(1)*DEXP( - RPOM * BDEL(2) )
+          FDPOM = - BDEL(2) * FPOM  
+          FD2POM = -BDEL(2) * FDPOM
+ 
+          APOM = ( FD2POM * DPOM * DPOM - 6 * DPOM * FDPOM
+     &             + 12 * FPOM ) / (2*DPOM**5.0D0)
+         
+          BPOM = ( 7 * DPOM * FDPOM - FD2POM * DPOM * DPOM
+     &             - 15 * FPOM ) / (DPOM**4.0D0)
+          CPOM = ( FD2POM * DPOM * DPOM - 8 * DPOM * FDPOM
+     &             + 20 * FPOM) / (2*DPOM**3.0D0)
+      
+          DCHI  = 5 * APOM * ( R - BENV(4) )**4.0D0 +
+     &            4 * BPOM * ( R - BENV(4) )**3.0D0 +
+     &            3 * CPOM * ( R - BENV(4) )**2.0D0  
+
+          GOTO 100
+        ENDIF
+        DCHI = -BDEL(2)*BDEL(1)*DEXP( - R * BDEL(2) )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+ 100  CONTINUE
+
+      RETURN
+      END
+
+
+
+c this function returns the value of parameter lambda_zero
+
+      DOUBLE PRECISION FUNCTION GETLAMZERO( IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+     
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4)
+
+      IF ( IPICK .EQ. 0 ) THEN
+           GETLAMZERO = AENV(2)
+      ELSEIF ( IPICK .EQ. 1 ) THEN
+           GETLAMZERO = ABENV(2)
+      ELSEIF ( IPICK .EQ. 2 ) THEN
+           GETLAMZERO = BENV(2)
+      ENDIF
+      
+      RETURN
+      END
+
+c this function returns the value of parameter Rcut
+        
+      DOUBLE PRECISION FUNCTION GETRCUT( IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4)
+        
+      IF ( IPICK .EQ. 0 ) THEN
+           GETRCUT = AENV(4)
+      ELSEIF ( IPICK .EQ. 1 ) THEN
+           GETRCUT = ABENV(4)  
+      ELSEIF ( IPICK .EQ. 2 ) THEN
+           GETRCUT = BENV(4)
+      ENDIF
+     
+      RETURN
+      END
+
+c this function returns the value of parameter R1
+        
+      DOUBLE PRECISION FUNCTION GETR1( IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4),
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+      IF ( IPICK .EQ. 0 ) THEN
+           GETR1 = ADEL(4)
+      ELSEIF ( IPICK .EQ. 1 ) THEN
+           GETR1 = ABDEL(4)  
+      ELSEIF ( IPICK .EQ. 2 ) THEN
+           GETR1 = BDEL(4)
+      ENDIF
+     
+      RETURN
+      END
+
+c this function returns the value of parameter Rc
+        
+      DOUBLE PRECISION FUNCTION GETRC( IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4)
+        
+      IF ( IPICK .EQ. 0 ) THEN
+           GETRC = AENV(3)
+      ELSEIF ( IPICK .EQ. 1 ) THEN
+           GETRC = ABENV(3)  
+      ELSEIF ( IPICK .EQ. 2 ) THEN
+           GETRC = BENV(3)
+      ENDIF
+     
+      RETURN
+      END
+
+
+      DOUBLE PRECISION FUNCTION  VEE( R, IPICK)
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )
+      COMMON  /CORES/  ACORE( 5 ), BCORE( 5 ), ABCORE( 5 )
+      EXTERNAL VPOT
+
+      IF      ( IPICK .EQ. 0 )  THEN
+          VEE = VPOT( R, AREP,  ACORE )
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+          VEE = VPOT( R, ABREP, ABCORE )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          VEE = VPOT( R, BREP,  BCORE )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+      
+      RETURN
+      END
+
+
+      DOUBLE PRECISION FUNCTION  VENV( R, IPICK, DELAM )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+      EXTERNAL VPOTENV
+     
+      IF      ( IPICK .EQ. 0 )  THEN
+          VENV = VPOTENV( R, AENV,  ADEL, DELAM )
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+          VENV = VPOTENV( R, ABENV, ABDEL , DELAM )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          VENV = VPOTENV( R, BENV,  BDEL, DELAM )
+      ELSE 
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION  FENVSPL( R, IPICK, DELAM, DDELAM )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+     
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+      EXTERNAL FES
+      
+      IF      ( IPICK .EQ. 0 )  THEN
+          FENVSPL = FES( R, AENV,  ADEL, DELAM, DDELAM ) 
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+          FENVSPL = FES( R, ABENV, ADEL , DELAM, DDELAM )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          FENVSPL = FES( R, BENV, BDEL, DELAM, DDELAM )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+      
+      RETURN
+      END 
+
+
+      DOUBLE PRECISION FUNCTION  DPHI( R, IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )
+      EXTERNAL DSPOT, DABS
+
+      IF      ( IPICK .EQ. 0 )  THEN
+          DPHI = DSPOT( R, ACOH )
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+          DPHI = DABS( R )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          DPHI = DSPOT( R, BCOH )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+      
+      RETURN
+      END
+
+      
+      DOUBLE PRECISION FUNCTION  DVEE( R, IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      COMMON  /INPUT/  AREP( 6, 2 ),  BREP( 6, 2 ),
+     &                 ACOH( 2, 2 ),  BCOH( 2, 2 ),  ABREP( 6, 2 )
+      COMMON  /CORES/  ACORE( 5 ), BCORE( 5 ), ABCORE( 5 )
+      EXTERNAL DVPOT
+
+      IF      ( IPICK .EQ. 0 )  THEN
+          DVEE = DVPOT( R, AREP,  ACORE)
+      ELSE IF ( IPICK .EQ. 1 )  THEN
+          DVEE = DVPOT( R, ABREP, ABCORE )
+      ELSE IF ( IPICK .EQ. 2 )  THEN
+          DVEE = DVPOT( R, BREP,  BCORE )
+      ELSE
+          WRITE ( 6, '("ERROR IN IPICK CHOICE")' )
+          STOP
+      ENDIF
+      
+      RETURN
+      END
+
+
+
+      DOUBLE PRECISION FUNCTION  MPW( IPICK )
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+
+      COMMON  /ENVIR/  AENV(4), BENV(4), ABENV(4) ,
+     &                 ADEL(4), BDEL(4), ABDEL(4)
+
+      MPW = ADEL(3)
+     
+      RETURN
+      END
+
+
+
+
+*******************************************************************************
+      
+
+
+

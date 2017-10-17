@@ -1,0 +1,1 @@
+The rules.mk file shall be edited so that nullmpi is only used if real MPI is not present!

@@ -1,0 +1,173 @@
+
+   subroutine getetot(flag)
+      use mod_precision
+      use mod_all_scalar
+      use mod_const
+      use mod_conf, only : rtc
+
+   !
+   !    This is a routine to evaluate the total energy and forces for a configuration.
+   !
+   !     FLAG = 0 => Read the coefficients from disk, and find Fermi energy.
+   !     FLAG = 1 => Evaluate the coefficients, write them to disk, and find Fermi energy.
+   !     FLAG = 2 => Evaluate the coefficients, do not write them to disk, and do not find Fermi energy.
+   !
+
+      implicit none
+
+      include "Include/Atom.array"
+      include "Include/Force.array"
+      include "Include/PosVel.array"
+      include "Include/NebList.array"
+      include "Include/ag.conn"
+
+
+      integer, intent(in) :: flag
+      real(dp) ::   repeng, u1, rxab,ryab,rzab
+      real(dp) ::   scf(14),scfcut(14)
+
+      integer ::  i, j, ii
+      integer ::  ia, ib, ja, bn, ianb
+      real(dp) :: ndr
+
+      if (forces) then
+         ftot(:,:nd) = 0.0_dp
+         fatom(:,:nd) = 0.0_dp
+         fbs(:,:nd) = 0.0_dp
+         fpp(:,:nd) = 0.0_dp
+         fblock(:,:nd+1) = 0.0_dp
+      end if
+         
+      ebond = 0.0_dp     
+      eprom = 0.0_dp     
+      eband = 0.0_dp     
+      emag  = 0.0_dp      
+      uent  = 0.0_dp     
+      eelct = 0.0_dp     
+      eenv  = 0.0_dp     
+      epair = 0.0_dp     
+      eclas = 0.0_dp    
+      ebind = 0.0_dp                              
+             
+      if ( fs_only  ==  0 )  then
+   !  Set up the neighbor lists for the bond part.
+         call bldnebt()
+         do ia = 1, nd
+            ja = aptr( ia )
+            ianb = 1
+            ib = bptr( ja )
+            do while ( ib  /=  eol )
+               if (ia /= ib) then
+!                   I am not quite sure whether this is needed here having in mind the routines that use scf rebuild it for every bond anyway
+                  select case (scf_include)
+                     case (0)
+                           scfcut(1:14) = 1.0_dp
+                     case (1)
+                           call screenf(ia,ib,scf)
+                           call scrcut(scf,scfcut)
+                     case default
+                           print *, 'SCF_INCLUDE has illegal value: ', scf_include
+                  end select
+                  scr(1:14,ia,ianb) = scfcut(1:14)
+                  nnbdr(:,ia,ianb) = ad( :, ia ) - ad( :, ib )
+                  ianb = ianb + 1
+               endif
+               ja = ja + 1
+               ib = bptr( ja )
+            enddo
+            nnbnd(ia) = ianb - 1
+         enddo
+
+   !  Evaluate the band structure energy and forces.
+
+         if (potflg == sbop) then
+            if (.not. quiet) then
+               write(9,*) "****************************************"
+               write(9,*) "*   Real-space calculation of energy   *"
+               write(9,*) "****************************************"
+            end if
+
+            call getebsfbs(flag)
+
+         elseif (potflg == kspace) then
+            write(*,*) "****************************************"
+            write(*,*) "*     K-space calculation of energy    *"
+            write(*,*) "****************************************"
+            call kebsfbs()
+         endif
+
+         eelct = ((ebond + eprom) - uent) - eatom + emag
+
+      endif
+      
+      
+      
+      if ( fs_include  ==  1 .or. env_include  ==  1 .or. vpair_include  ==  1 )  then         
+!  Set up the neighbor lists for the Finnis-Sinclair potential.
+         call bldnebtfs()
+!  Calculate the Finnis-Sinclair energy and the corresponding forces.
+      
+         call classic()
+      endif
+      
+      ebind = eelct + eclas
+
+      rtc % tote % bond = ebond
+      rtc % tote % prom = eprom
+      rtc % tote % band = eband
+      rtc % tote % atom = eatom
+      rtc % tote % mag  = emag
+      rtc % tote % ent  = uent 
+      rtc % tote % elct = eelct
+      rtc % tote % env  = eenv 
+      rtc % tote % pair = epair
+      rtc % tote % clas = eclas
+
+      rtc % tote % bind = ebind
+
+      ndr = real(nd,dp)  
+         
+      rtc % avre % bond = ebond/ndr
+      rtc % avre % prom = eprom/ndr
+      rtc % avre % band = eband/ndr
+      rtc % avre % atom = eatom/ndr
+      rtc % avre % mag  = emag /ndr
+      rtc % avre % ent  = uent /ndr 
+      rtc % avre % elct = eelct/ndr
+      rtc % avre % env  = eenv /ndr
+      rtc % avre % pair = epair/ndr
+      rtc % avre % clas = eclas/ndr
+      
+      rtc % avre % bind = ebind/ndr
+
+
+   !    Add in one body energy and forces.
+      if (v1flag > 0) then
+         call onebdy(u1,fpp)
+         epair = epair + u1
+      endif
+      
+      if (forces) then
+         ftot(:,:nd) = fbs(:,:nd) + fpp(:,:nd)
+!                   
+!          fblock(:,nd+1) = 0.0_dp
+!          do i = nd, 1, -1
+!             fblock(:,i) = fblock(:,i+1) + ftot(:,i)
+!          end do
+         
+!          if (dndm > 1.0e-6_dp) then
+!             dmdl(:,:nd) = dmdl(:,:nd)/dndm
+!          else
+!             dndm = 0.0_dp
+!             dmdl(3,:nd) = 0.0_dp
+!          endif
+!          
+         if (.not. quiet) call print_forces('', 6)
+      end if
+      
+   end subroutine getetot
+
+
+
+
+

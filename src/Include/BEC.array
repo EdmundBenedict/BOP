@@ -1,0 +1,29 @@
+
+!
+!    Binding energy curve information.
+!
+
+!*** T matrix. T(I,J) = dU(I)/dX(J)
+      real(dp) :: tmatrix(3,3)
+
+!*** Binding energy curves.
+      real(dp) :: bec(mxnt)
+
+!*** List of values of T matrix prefactors.
+      real(dp) :: talpha(mxnt+1)
+
+!*** Arrays for fitting polynomials.
+      real(dp) :: polya(0:pmax,0:pmax)
+      real(dp) :: polyb(0:pmax)
+      real(dp) :: polys(0:2*pmax)
+
+!*** Index
+      integer indx(pmax)
+
+!
+!    Declare the common blocks.
+!
+
+      common /becint/indx
+      common /becdp/tmatrix,bec,talpha,polya,polyb,polys
+

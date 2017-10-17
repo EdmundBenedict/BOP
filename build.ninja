@@ -1,0 +1,389 @@
+ninja_required_version = 1.7
+srcpath = .
+bldpath = bld/mi/o
+modpath = mods
+ldflags = -mkl -lsymspg
+soft = 
+knrcc = 
+cflags = 
+omp = 
+prefix = /opt/lm
+cxx = 
+ar = ar
+ccomp = 
+fc = mpif90
+modflag = -module
+gwflags = 
+ffxc = mpif90
+fflags = -DMPI -Difort_read_bug -O3
+cc = 
+ppflags = 
+nvcc = 
+
+
+# Export this env to change progress reporting
+# NINJA_STATUS=[%c %r %s/%t %p]
+
+builddir = $bldpath
+
+ccomp = $bldpath/ccomp
+
+implicit_cflags    = -I$bldpath
+implicit_cxxflags  = -I$bldpath
+implicit_nvccflags = -I$bldpath
+implicit_fflags = $modflag $bldpath/$modpath -I$bldpath/$modpath -I$bldpath
+
+
+rule cp
+    command = cp $in $out
+
+rule cxxc
+    command = $cxx $cxxflags $implicit_cxxflags -c $in -o $out
+rule cxxl
+    command = $cxx $cxxflags $implicit_cxxflags $in $ldflags -o $out
+
+rule nvcc
+    command = $nvcc $nvccflags $implicit_nvccflags -c $in -o $out
+rule nvcl
+    command = $nvcc $nvccflags $implicit_nvccflags $in $ldflags -o $out
+
+rule cc
+    command = $cc $cflags $implicit_cflags -c $in -o $out
+rule cl
+    command = $cc $cflags $implicit_cflags $in $ldflags -o $out
+
+rule fc
+    command = $fc $fflags $implicit_fflags -c $in -o $out
+rule fxc
+    command = $ffxc $fflags $implicit_fflags -c $in -o $out
+rule ffp
+    command = $ccomp -c! $in $out
+rule fxp
+    command = $ccomp $ppflags $in $out
+rule fl
+    command = $fc $fflags $implicit_fflags $in $ldflags -o $out
+
+rule ar
+    command = $ar rc $out $in
+
+rule cmd
+    command = echo command not given
+
+rule mkdir
+    command = mkdir -p $out
+
+rule nj
+    command = python $in $out
+    generator = 1
+
+build $bldpath/build.ninja: nj $srcpath/build.py | flags.mk $srcpath/nj/nj.py
+build $bldpath/src/topologia.f90.o | $bldpath/$modpath/topologia.mod: fc $srcpath/src/topologia.f90
+    restat = 1
+build $bldpath/src/mod_precision.f90.o | $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_precision.mod: fc $srcpath/src/mod_precision.f90
+    restat = 1
+build $bldpath/src/mod_const.f90.o | $bldpath/$modpath/mod_const.mod: fc $srcpath/src/mod_const.f90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_all_scalar.f90.o | $bldpath/$modpath/mod_all_scalar.mod: fc $srcpath/src/mod_all_scalar.f90 | $bldpath/$modpath/mod_const.mod
+    restat = 1
+build $bldpath/src/mod_io.F90.o | $bldpath/$modpath/mod_io.mod: fc $srcpath/src/mod_io.F90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_misc.f90.o | $bldpath/$modpath/mod_misc.mod: fc $srcpath/src/mod_misc.f90 | $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_srt.f90.o | $bldpath/$modpath/mod_srt.mod: fc $srcpath/src/mod_srt.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_conf.f90.o | $bldpath/$modpath/mod_conf.mod: fc $srcpath/src/mod_conf.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_tail.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod
+    restat = 1
+build $bldpath/src/ab_io.f90.o | $bldpath/$modpath/ab_io.mod: fc $srcpath/src/ab_io.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_srt.mod
+    restat = 1
+build $bldpath/src/mod_ham.f90.o | $bldpath/$modpath/mod_ham.mod: fc $srcpath/src/mod_ham.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_chi.f90.o | $bldpath/$modpath/mod_chi.mod: fc $srcpath/src/mod_chi.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod
+    restat = 1
+build $bldpath/src/mod_gsp.f90.o | $bldpath/$modpath/mod_gsp.mod: fc $srcpath/src/mod_gsp.f90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/sa_link.f90.o | $bldpath/$modpath/sa_link.mod: fc $srcpath/src/sa_link.f90 | $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod
+    restat = 1
+build $bldpath/src/g0n.f90.o | $bldpath/$modpath/mod_g0n.mod: fc $srcpath/src/g0n.f90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_funptr.f90.o | $bldpath/$modpath/mod_funptr.mod: fc $srcpath/src/mod_funptr.f90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/avennb.f90.o: fc $srcpath/src/avennb.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/bldlist.f90.o: fc $srcpath/src/bldlist.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/bndinf.f90.o: fc $srcpath/src/bndinf.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/bseatm.f90.o: fc $srcpath/src/bseatm.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/constr.f90.o: fc $srcpath/src/constr.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dmatml.f90.o: fc $srcpath/src/dmatml.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dradf.f90.o: fc $srcpath/src/dradf.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dscale.f90.o: fc $srcpath/src/dscale.f90 | $bldpath/$modpath/mod_gsp.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/entden.f90.o: fc $srcpath/src/entden.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/findj.f90.o: fc $srcpath/src/findj.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/fndrec.f90.o: fc $srcpath/src/fndrec.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getmass.f90.o: fc $srcpath/src/getmass.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/grdmat.f90.o: fc $srcpath/src/grdmat.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_conf.mod
+build $bldpath/src/inichm.f90.o: fc $srcpath/src/inichm.f90 | $bldpath/$modpath/mod_const.mod
+build $bldpath/src/initvel.f90.o: fc $srcpath/src/initvel.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/insprs.f90.o: fc $srcpath/src/insprs.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/instem.f90.o: fc $srcpath/src/instem.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/inv3x3.f90.o: fc $srcpath/src/inv3x3.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/finv3x3.f90.o: fc $srcpath/src/finv3x3.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/lineqsolv.f90.o: fc $srcpath/src/lineqsolv.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/maker.f90.o: fc $srcpath/src/maker.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/matel.f90.o: fc $srcpath/src/matel.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_conf.mod
+build $bldpath/src/mdnve.f90.o: fc $srcpath/src/mdnve.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/mdnvt.f90.o: fc $srcpath/src/mdnvt.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/msd.f90.o: fc $srcpath/src/msd.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/mstmin.f90.o: fc $srcpath/src/mstmin.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/mul3x3.f90.o: fc $srcpath/src/mul3x3.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/onebdy.f90.o: fc $srcpath/src/onebdy.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/onsite.f90.o: fc $srcpath/src/onsite.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/orbrot.f90.o: fc $srcpath/src/orbrot.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/orderp.f90.o: fc $srcpath/src/orderp.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/pbc.f90.o: fc $srcpath/src/pbc.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/scale.f90.o: fc $srcpath/src/scale.f90 | $bldpath/$modpath/mod_gsp.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/radf.f90.o: fc $srcpath/src/radf.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/ran1.f90.o: fc $srcpath/src/ran1.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/rdtokn.f90.o: fc $srcpath/src/rdtokn.f90
+build $bldpath/src/rescale.f90.o: fc $srcpath/src/rescale.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/rotbo.f90.o: fc $srcpath/src/rotbo.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/rpoly.f90.o: fc $srcpath/src/rpoly.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/states.f90.o: fc $srcpath/src/states.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/theta.f90.o: fc $srcpath/src/theta.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/zap.f90.o: fc $srcpath/src/zap.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/zcore.f90.o: fc $srcpath/src/zcore.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/ai.f90.o: fc $srcpath/src/ai.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/bldclus.f90.o: fc $srcpath/src/bldclus.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/bldh.f90.o: fc $srcpath/src/bldh.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/screenf.f90.o: fc $srcpath/src/screenf.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/scrcut.f90.o: fc $srcpath/src/scrcut.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dabdl.f90.o: fc $srcpath/src/dabdl.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/dchinl.f90.o: fc $srcpath/src/dchinl.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dchisr.f90.o: fc $srcpath/src/dchisr.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/ddelta.f90.o: fc $srcpath/src/ddelta.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/delta.f90.o: fc $srcpath/src/delta.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/evalfn.f90.o: fc $srcpath/src/evalfn.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/simp.f90.o: fc $srcpath/src/simp.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/prodcoeff.f90.o: fc $srcpath/src/prodcoeff.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dot.f90.o: fc $srcpath/src/dot.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getb.f90.o: fc $srcpath/src/getb.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/srtint.f90.o: fc $srcpath/src/srtint.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_srt.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/farcdat.f90.o: fc $srcpath/src/farcdat.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/fdpoly.f90.o: fc $srcpath/src/fdpoly.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/locabinf.f90.o: fc $srcpath/src/locabinf.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/locsym.f90.o: fc $srcpath/src/locsym.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dndmfn.f90.o: fc $srcpath/src/dndmfn.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/mdnpt.f90.o: fc $srcpath/src/mdnpt.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/pascal.f90.o: fc $srcpath/src/pascal.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/parfrac.f90.o: fc $srcpath/src/parfrac.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/precab.f90.o: fc $srcpath/src/precab.f90 | $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/gethu.f90.o: fc $srcpath/src/gethu.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_ham.mod
+build $bldpath/src/recab.f90.o: fc $srcpath/src/recab.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/trncav.f90.o: fc $srcpath/src/trncav.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/trncno.f90.o: fc $srcpath/src/trncno.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/utran.f90.o: fc $srcpath/src/utran.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getroots.f90.o: fc $srcpath/src/getroots.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/poly.f90.o: fc $srcpath/src/poly.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/numelnull.f90.o: fc $srcpath/src/numelnull.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/numelsrt.f90.o: fc $srcpath/src/numelsrt.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/getchisrt.f90.o: fc $srcpath/src/getchisrt.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/epromavg.f90.o: fc $srcpath/src/epromavg.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/eprommix.f90.o: fc $srcpath/src/eprommix.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/epromnoavg.f90.o: fc $srcpath/src/epromnoavg.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/febond.f90.o: fc $srcpath/src/febond.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/getptm.f90.o: fc $srcpath/src/getptm.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/evlptm.f90.o: fc $srcpath/src/evlptm.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dscreenf.f90.o: fc $srcpath/src/dscreenf.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/utranv.f90.o: fc $srcpath/src/utranv.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getebsnull.f90.o: fc $srcpath/src/getebsnull.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getchinull.f90.o: fc $srcpath/src/getchinull.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getnch.f90.o: fc $srcpath/src/getnch.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/move.f90.o: fc $srcpath/src/move.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getefsrt.f90.o: fc $srcpath/src/getefsrt.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/ebsos.f90.o: fc $srcpath/src/ebsos.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/entropy.f90.o: fc $srcpath/src/entropy.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/fintrm.f90.o: fc $srcpath/src/fintrm.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getefnull.f90.o: fc $srcpath/src/getefnull.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/volrelax.f90.o: fc $srcpath/src/volrelax.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/diffuse.f90.o: fc $srcpath/src/diffuse.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/Library/DiagComp.f90.o: fc $srcpath/src/Library/DiagComp.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/DiagSym.f90.o: fc $srcpath/src/Library/DiagSym.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/FindRoots.f90.o: fc $srcpath/src/Library/FindRoots.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/FindZero.f90.o: fc $srcpath/src/Library/FindZero.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/cdiv.f90.o: fc $srcpath/src/Library/cdiv.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/dcabs1.f90.o: fc $srcpath/src/Library/dcabs1.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/dswap.f90.o: fc $srcpath/src/Library/dswap.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/fft2d.f90.o: fc $srcpath/src/Library/fft2d.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/four1.f90.o: fc $srcpath/src/Library/four1.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/htribk.f90.o: fc $srcpath/src/Library/htribk.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/htridi.f90.o: fc $srcpath/src/Library/htridi.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/integ.f90.o: fc $srcpath/src/Library/integ.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/iyamax.f90.o: fc $srcpath/src/Library/iyamax.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/pythag.f90.o: fc $srcpath/src/Library/pythag.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/tql1.f90.o: fc $srcpath/src/Library/tql1.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/tql2.f90.o: fc $srcpath/src/Library/tql2.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/tred2.f90.o: fc $srcpath/src/Library/tred2.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/yaxpy.f90.o: fc $srcpath/src/Library/yaxpy.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/ygefa.f90.o: fc $srcpath/src/Library/ygefa.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/Library/yscal.f90.o: fc $srcpath/src/Library/yscal.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/repulsive_data_mods.f90.o | $bldpath/$modpath/pair_coefficients.mod: fc $srcpath/src/repulsive_data_mods.f90 | $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/bop.f90.o: fc $srcpath/src/bop.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_neb.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/addg3.f90.o: fc $srcpath/src/addg3.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/addgr.f90.o: fc $srcpath/src/addgr.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/addsw.f90.o: fc $srcpath/src/addsw.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/bldlcell.f90.o: fc $srcpath/src/bldlcell.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/dump.f90.o: fc $srcpath/src/dump.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/erasab.f90.o: fc $srcpath/src/erasab.f90 | $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/gammas.f90.o: fc $srcpath/src/gammas.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_srt.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/getdos.f90.o: fc $srcpath/src/getdos.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/geteatom.f90.o: fc $srcpath/src/geteatom.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/getelast.f90.o: fc $srcpath/src/getelast.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/get_quick_elast.f90.o: fc $srcpath/src/get_quick_elast.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getetot.F90.o: fc $srcpath/src/getetot.F90 | $bldpath/$modpath/mod_forcedetails.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/tbbop_emb.mod
+build $bldpath/src/getldos.f90.o: fc $srcpath/src/getldos.f90 | $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/getocc.f90.o: fc $srcpath/src/getocc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getrho.f90.o: fc $srcpath/src/getrho.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getvib.f90.o: fc $srcpath/src/getvib.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/moldyn.f90.o: fc $srcpath/src/moldyn.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/outfil.f90.o: fc $srcpath/src/outfil.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/panic.f90.o: fc $srcpath/src/panic.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/rdab.f90.o: fc $srcpath/src/rdab.f90 | $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/relax.f90.o: fc $srcpath/src/relax.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/repeng.f90.o: fc $srcpath/src/repeng.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/repf.f90.o: fc $srcpath/src/repf.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/elcon_bcc.f90.o: fc $srcpath/src/elcon_bcc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/elcon_l10.f90.o: fc $srcpath/src/elcon_l10.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/tag.f90.o: fc $srcpath/src/tag.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_srt.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/gamma.f90.o: fc $srcpath/src/gamma.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getensurf.f90.o: fc $srcpath/src/getensurf.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getenvol.f90.o: fc $srcpath/src/getenvol.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/get_en.f90.o: fc $srcpath/src/get_en.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/gb.f90.o: fc $srcpath/src/gb.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/strain.f90.o: fc $srcpath/src/strain.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/outblock.f90.o: fc $srcpath/src/outblock.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/makeblocks.f90.o: fc $srcpath/src/makeblocks.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/maxf_gs.f90.o: fc $srcpath/src/maxf_gs.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/maxf_gb.f90.o: fc $srcpath/src/maxf_gb.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/relax_sb.f90.o: fc $srcpath/src/relax_sb.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/move_sb.f90.o: fc $srcpath/src/move_sb.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/sort_out.f90.o: fc $srcpath/src/sort_out.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/rose_curve.f90.o: fc $srcpath/src/rose_curve.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/findminhcp.f90.o: fc $srcpath/src/findminhcp.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/findminfcc.f90.o: fc $srcpath/src/findminfcc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/elcon_hcp.f90.o: fc $srcpath/src/elcon_hcp.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/elcon_hcp_short.f90.o: fc $srcpath/src/elcon_hcp_short.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/elcon_fcc.f90.o: fc $srcpath/src/elcon_fcc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/get_en_2.f90.o: fc $srcpath/src/get_en_2.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/relax_ds.f90.o: fc $srcpath/src/relax_ds.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/maxf_ds.f90.o: fc $srcpath/src/maxf_ds.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/move_ds.f90.o: fc $srcpath/src/move_ds.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/stress.f90.o: fc $srcpath/src/stress.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/logplot.f90.o: fc $srcpath/src/logplot.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/report.f90.o: fc $srcpath/src/report.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/safemin.f90.o: fc $srcpath/src/safemin.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/setpress.f90.o: fc $srcpath/src/setpress.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/resetup.f90.o: fc $srcpath/src/resetup.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/pair_coefficients.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_gsp.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_tail.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/sumrule.f90.o: fc $srcpath/src/sumrule.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/usrexit.f90.o: fc $srcpath/src/usrexit.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/wrtab.f90.o: fc $srcpath/src/wrtab.f90 | $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/wrthis.f90.o: fc $srcpath/src/wrthis.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/latgfbc.f90.o: fc $srcpath/src/latgfbc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/diffdisp.f90.o: fc $srcpath/src/diffdisp.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/lgfsafemin.f90.o: fc $srcpath/src/lgfsafemin.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/random.f90.o: fc $srcpath/src/random.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/mpython.f90.o: fc $srcpath/src/mpython.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/gfbc_outp.f90.o: fc $srcpath/src/gfbc_outp.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/gfbcaf.f90.o: fc $srcpath/src/gfbcaf.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/envscr.f90.o: fc $srcpath/src/envscr.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/kspace/mod_kspace.F90.o | $bldpath/$modpath/mod_kspace.mod: fc $srcpath/src/kspace/mod_kspace.F90 | $bldpath/$modpath/spglib_f08.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod
+    restat = 1
+build $bldpath/src/kspace/bsf.F90.o: fc $srcpath/src/kspace/bsf.F90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/kspace/kbldh.f90.o: fc $srcpath/src/kspace/kbldh.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/kspace/shiftons.f90.o: fc $srcpath/src/kspace/shiftons.f90 | $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/kspace/spglib_f08.f90.o | $bldpath/$modpath/spglib_f08.mod: fc $srcpath/src/kspace/spglib_f08.f90
+    restat = 1
+build $bldpath/src/kspace/atq.f90.o: fc $srcpath/src/kspace/atq.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/kspace/keprom.f90.o: fc $srcpath/src/kspace/keprom.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/kspace/kdiag.f90.o: fc $srcpath/src/kspace/kdiag.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod
+build $bldpath/src/kspace/iktran.f90.o: fc $srcpath/src/kspace/iktran.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/kspace/intersite.F90.o: fc $srcpath/src/kspace/intersite.F90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/mod_pft.f90.o | $bldpath/$modpath/mod_pft.mod: fc $srcpath/src/mod_pft.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_tail.mod
+    restat = 1
+build $bldpath/src/print_forces.f90.o: fc $srcpath/src/print_forces.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/zbrent.f90.o: fc $srcpath/src/zbrent.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/zriddr.f90.o: fc $srcpath/src/zriddr.f90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/eff.f90.o: fc $srcpath/src/eff.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/spnbop.F90.o: fc $srcpath/src/spnbop.F90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/femag.F90.o: fc $srcpath/src/femag.F90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_atom_ar.mod
+build $bldpath/src/mod_atom_ar.f90.o | $bldpath/$modpath/mod_atom_ar.mod: fc $srcpath/src/mod_atom_ar.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/mod_tail.f90.o | $bldpath/$modpath/mod_tail.mod: fc $srcpath/src/mod_tail.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/strs_tetr.f90.o: fc $srcpath/src/strs_tetr.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/strs_cube.f90.o: fc $srcpath/src/strs_cube.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/bldhdo.f90.o: fc $srcpath/src/bldhdo.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_atom_ar.mod
+build $bldpath/src/recurse.f90.o: fc $srcpath/src/recurse.f90 | $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+build $bldpath/src/classic.f90.o: fc $srcpath/src/classic.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_gsp.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/dosplot.f90.o: fc $srcpath/src/dosplot.f90 | $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/eval_rfun.f90.o: fc $srcpath/src/eval_rfun.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_conf.mod
+build $bldpath/src/emb/emb_sc.F90.o | $bldpath/$modpath/tbbop_emb.mod: fc $srcpath/src/emb/emb_sc.F90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_g0n.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_srt.mod
+    restat = 1
+build $bldpath/src/writecfg.f90.o: fc $srcpath/src/writecfg.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/writexyz.f90.o: fc $srcpath/src/writexyz.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/print_bond_scalings.f90.o: fc $srcpath/src/print_bond_scalings.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_conf.mod
+build $bldpath/src/writecell.f90.o: fc $srcpath/src/writecell.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/writeddp.f90.o: fc $srcpath/src/writeddp.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/exit_orderly.f90.o: fc $srcpath/src/exit_orderly.f90 | $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/ab_io.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/kspace/kentropy.f90.o: fc $srcpath/src/kspace/kentropy.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/kspace/krhodiag.f90.o: fc $srcpath/src/kspace/krhodiag.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_conf.mod
+build $bldpath/src/kspace/spnkspc.f90.o: fc $srcpath/src/kspace/spnkspc.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/kspace/fndocc.f90.o: fc $srcpath/src/kspace/fndocc.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/getebsfbs.f90.o: fc $srcpath/src/getebsfbs.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_par.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/numel.f90.o: fc $srcpath/src/numel.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/get_dq2chia.f90.o: fc $srcpath/src/get_dq2chia.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/kspace/kemag.f90.o: fc $srcpath/src/kspace/kemag.f90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/eval_bsens.f90.o: fc $srcpath/src/eval_bsens.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/forcebop.f90.o: fc $srcpath/src/forcebop.f90 | $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_funptr.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+build $bldpath/src/kspace/eval_kens.f90.o: fc $srcpath/src/kspace/eval_kens.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/kspace/kebsfbs.f90.o: fc $srcpath/src/kspace/kebsfbs.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/forcecheck.f90.o: fc $srcpath/src/forcecheck.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/bldnebt.f90.o: fc $srcpath/src/bldnebt.f90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_const.mod
+build $bldpath/src/forcedetails.f90.o | $bldpath/$modpath/mod_forcedetails.mod: fc $srcpath/src/forcedetails.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_ham.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_pft.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/topologia.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_chi.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/ab_io.mod
+    restat = 1
+build $bldpath/src/neb.f90.o | $bldpath/$modpath/mod_neb.mod: fc $srcpath/src/neb.f90 | $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+    restat = 1
+build $bldpath/src/mod_par.f90.o | $bldpath/$modpath/mod_par.mod: fc $srcpath/src/mod_par.f90 | $bldpath/$modpath/mod_precision.mod
+    restat = 1
+build $bldpath/src/kspace/kdosplot.F90.o: fc $srcpath/src/kspace/kdosplot.F90 | $bldpath/$modpath/mod_kspace.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/topologia.mod
+build $bldpath/src/mkstrxd.F90.o: fc $srcpath/src/mkstrxd.F90 | $bldpath/$modpath/mod_const.mod $bldpath/$modpath/mod_precision.mod $bldpath/$modpath/mod_atom_ar.mod $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/scg.F90.o: fc $srcpath/src/scg.F90 | $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/makcgn.F90.o: fc $srcpath/src/makcgn.F90
+build $bldpath/src/mkstrxidx.F90.o: fc $srcpath/src/mkstrxidx.F90
+build $bldpath/src/soldhj.F90.o: fc $srcpath/src/soldhj.F90
+build $bldpath/src/ropyln.F90.o: fc $srcpath/src/ropyln.F90
+build $bldpath/src/ropcsm.F90.o: fc $srcpath/src/ropcsm.F90
+build $bldpath/src/ropyln1.F90.o: fc $srcpath/src/ropyln1.F90
+build $bldpath/src/besslr.F90.o: fc $srcpath/src/besslr.F90
+build $bldpath/src/tbshfl.F90.o: fc $srcpath/src/tbshfl.F90
+build $bldpath/src/scglp1.F90.o: fc $srcpath/src/scglp1.F90
+build $bldpath/src/qmix.F90.o: fc $srcpath/src/qmix.F90 | $bldpath/$modpath/mod_all_scalar.mod $bldpath/$modpath/mod_precision.mod
+build $bldpath/src/broyj.F90.o: fc $srcpath/src/broyj.F90 | $bldpath/$modpath/mod_all_scalar.mod
+build $bldpath/src/dgedi.F90.o: fc $srcpath/src/dgedi.F90
+build $bldpath/src/dsifa.F90.o: fc $srcpath/src/dsifa.F90
+build $bldpath/src/dsidi.F90.o: fc $srcpath/src/dsidi.F90
+build $bldpath/src/dsmpy.F90.o: fc $srcpath/src/dsmpy.F90
+build $bldpath/src/dqinv.F90.o: fc $srcpath/src/dqinv.F90
+build $bldpath/libbop.a: ar $bldpath/src/topologia.f90.o $bldpath/src/mod_precision.f90.o $bldpath/src/mod_const.f90.o $bldpath/src/mod_all_scalar.f90.o $bldpath/src/mod_io.F90.o $bldpath/src/mod_misc.f90.o $bldpath/src/mod_srt.f90.o $bldpath/src/mod_conf.f90.o $bldpath/src/ab_io.f90.o $bldpath/src/mod_ham.f90.o $bldpath/src/mod_chi.f90.o $bldpath/src/mod_gsp.f90.o $bldpath/src/sa_link.f90.o $bldpath/src/g0n.f90.o $bldpath/src/mod_funptr.f90.o $bldpath/src/avennb.f90.o $bldpath/src/bldlist.f90.o $bldpath/src/bndinf.f90.o $bldpath/src/bseatm.f90.o $bldpath/src/constr.f90.o $bldpath/src/dmatml.f90.o $bldpath/src/dradf.f90.o $bldpath/src/dscale.f90.o $bldpath/src/entden.f90.o $bldpath/src/findj.f90.o $bldpath/src/fndrec.f90.o $bldpath/src/getmass.f90.o $bldpath/src/grdmat.f90.o $bldpath/src/inichm.f90.o $bldpath/src/initvel.f90.o $bldpath/src/insprs.f90.o $bldpath/src/instem.f90.o $bldpath/src/inv3x3.f90.o $bldpath/src/finv3x3.f90.o $bldpath/src/lineqsolv.f90.o $bldpath/src/maker.f90.o $bldpath/src/matel.f90.o $bldpath/src/mdnve.f90.o $bldpath/src/mdnvt.f90.o $bldpath/src/msd.f90.o $bldpath/src/mstmin.f90.o $bldpath/src/mul3x3.f90.o $bldpath/src/onebdy.f90.o $bldpath/src/onsite.f90.o $bldpath/src/orbrot.f90.o $bldpath/src/orderp.f90.o $bldpath/src/pbc.f90.o $bldpath/src/scale.f90.o $bldpath/src/radf.f90.o $bldpath/src/ran1.f90.o $bldpath/src/rdtokn.f90.o $bldpath/src/rescale.f90.o $bldpath/src/rotbo.f90.o $bldpath/src/rpoly.f90.o $bldpath/src/states.f90.o $bldpath/src/theta.f90.o $bldpath/src/zap.f90.o $bldpath/src/zcore.f90.o $bldpath/src/ai.f90.o $bldpath/src/bldclus.f90.o $bldpath/src/bldh.f90.o $bldpath/src/screenf.f90.o $bldpath/src/scrcut.f90.o $bldpath/src/dabdl.f90.o $bldpath/src/dchinl.f90.o $bldpath/src/dchisr.f90.o $bldpath/src/ddelta.f90.o $bldpath/src/delta.f90.o $bldpath/src/evalfn.f90.o $bldpath/src/simp.f90.o $bldpath/src/prodcoeff.f90.o $bldpath/src/dot.f90.o $bldpath/src/getb.f90.o $bldpath/src/srtint.f90.o $bldpath/src/farcdat.f90.o $bldpath/src/fdpoly.f90.o $bldpath/src/locabinf.f90.o $bldpath/src/locsym.f90.o $bldpath/src/dndmfn.f90.o $bldpath/src/mdnpt.f90.o $bldpath/src/pascal.f90.o $bldpath/src/parfrac.f90.o $bldpath/src/precab.f90.o $bldpath/src/gethu.f90.o $bldpath/src/recab.f90.o $bldpath/src/trncav.f90.o $bldpath/src/trncno.f90.o $bldpath/src/utran.f90.o $bldpath/src/getroots.f90.o $bldpath/src/poly.f90.o $bldpath/src/numelnull.f90.o $bldpath/src/numelsrt.f90.o $bldpath/src/getchisrt.f90.o $bldpath/src/epromavg.f90.o $bldpath/src/eprommix.f90.o $bldpath/src/epromnoavg.f90.o $bldpath/src/febond.f90.o $bldpath/src/getptm.f90.o $bldpath/src/evlptm.f90.o $bldpath/src/dscreenf.f90.o $bldpath/src/utranv.f90.o $bldpath/src/getebsnull.f90.o $bldpath/src/getchinull.f90.o $bldpath/src/getnch.f90.o $bldpath/src/move.f90.o $bldpath/src/getefsrt.f90.o $bldpath/src/ebsos.f90.o $bldpath/src/entropy.f90.o $bldpath/src/fintrm.f90.o $bldpath/src/getefnull.f90.o $bldpath/src/volrelax.f90.o $bldpath/src/diffuse.f90.o $bldpath/src/Library/DiagComp.f90.o $bldpath/src/Library/DiagSym.f90.o $bldpath/src/Library/FindRoots.f90.o $bldpath/src/Library/FindZero.f90.o $bldpath/src/Library/cdiv.f90.o $bldpath/src/Library/dcabs1.f90.o $bldpath/src/Library/dswap.f90.o $bldpath/src/Library/fft2d.f90.o $bldpath/src/Library/four1.f90.o $bldpath/src/Library/htribk.f90.o $bldpath/src/Library/htridi.f90.o $bldpath/src/Library/integ.f90.o $bldpath/src/Library/iyamax.f90.o $bldpath/src/Library/pythag.f90.o $bldpath/src/Library/tql1.f90.o $bldpath/src/Library/tql2.f90.o $bldpath/src/Library/tred2.f90.o $bldpath/src/Library/yaxpy.f90.o $bldpath/src/Library/ygefa.f90.o $bldpath/src/Library/yscal.f90.o $bldpath/src/repulsive_data_mods.f90.o $bldpath/src/bop.f90.o $bldpath/src/addg3.f90.o $bldpath/src/addgr.f90.o $bldpath/src/addsw.f90.o $bldpath/src/bldlcell.f90.o $bldpath/src/dump.f90.o $bldpath/src/erasab.f90.o $bldpath/src/gammas.f90.o $bldpath/src/getdos.f90.o $bldpath/src/geteatom.f90.o $bldpath/src/getelast.f90.o $bldpath/src/get_quick_elast.f90.o $bldpath/src/getetot.F90.o $bldpath/src/getldos.f90.o $bldpath/src/getocc.f90.o $bldpath/src/getrho.f90.o $bldpath/src/getvib.f90.o $bldpath/src/moldyn.f90.o $bldpath/src/outfil.f90.o $bldpath/src/panic.f90.o $bldpath/src/rdab.f90.o $bldpath/src/relax.f90.o $bldpath/src/repeng.f90.o $bldpath/src/repf.f90.o $bldpath/src/elcon_bcc.f90.o $bldpath/src/elcon_l10.f90.o $bldpath/src/tag.f90.o $bldpath/src/gamma.f90.o $bldpath/src/getensurf.f90.o $bldpath/src/getenvol.f90.o $bldpath/src/get_en.f90.o $bldpath/src/gb.f90.o $bldpath/src/strain.f90.o $bldpath/src/outblock.f90.o $bldpath/src/makeblocks.f90.o $bldpath/src/maxf_gs.f90.o $bldpath/src/maxf_gb.f90.o $bldpath/src/relax_sb.f90.o $bldpath/src/move_sb.f90.o $bldpath/src/sort_out.f90.o $bldpath/src/rose_curve.f90.o $bldpath/src/findminhcp.f90.o $bldpath/src/findminfcc.f90.o $bldpath/src/elcon_hcp.f90.o $bldpath/src/elcon_hcp_short.f90.o $bldpath/src/elcon_fcc.f90.o $bldpath/src/get_en_2.f90.o $bldpath/src/relax_ds.f90.o $bldpath/src/maxf_ds.f90.o $bldpath/src/move_ds.f90.o $bldpath/src/stress.f90.o $bldpath/src/logplot.f90.o $bldpath/src/report.f90.o $bldpath/src/safemin.f90.o $bldpath/src/setpress.f90.o $bldpath/src/resetup.f90.o $bldpath/src/sumrule.f90.o $bldpath/src/usrexit.f90.o $bldpath/src/wrtab.f90.o $bldpath/src/wrthis.f90.o $bldpath/src/latgfbc.f90.o $bldpath/src/diffdisp.f90.o $bldpath/src/lgfsafemin.f90.o $bldpath/src/random.f90.o $bldpath/src/mpython.f90.o $bldpath/src/gfbc_outp.f90.o $bldpath/src/gfbcaf.f90.o $bldpath/src/envscr.f90.o $bldpath/src/kspace/mod_kspace.F90.o $bldpath/src/kspace/bsf.F90.o $bldpath/src/kspace/kbldh.f90.o $bldpath/src/kspace/shiftons.f90.o $bldpath/src/kspace/spglib_f08.f90.o $bldpath/src/kspace/atq.f90.o $bldpath/src/kspace/keprom.f90.o $bldpath/src/kspace/kdiag.f90.o $bldpath/src/kspace/iktran.f90.o $bldpath/src/kspace/intersite.F90.o $bldpath/src/mod_pft.f90.o $bldpath/src/print_forces.f90.o $bldpath/src/zbrent.f90.o $bldpath/src/zriddr.f90.o $bldpath/src/eff.f90.o $bldpath/src/spnbop.F90.o $bldpath/src/femag.F90.o $bldpath/src/mod_atom_ar.f90.o $bldpath/src/mod_tail.f90.o $bldpath/src/strs_tetr.f90.o $bldpath/src/strs_cube.f90.o $bldpath/src/bldhdo.f90.o $bldpath/src/recurse.f90.o $bldpath/src/classic.f90.o $bldpath/src/dosplot.f90.o $bldpath/src/eval_rfun.f90.o $bldpath/src/emb/emb_sc.F90.o $bldpath/src/writecfg.f90.o $bldpath/src/writexyz.f90.o $bldpath/src/print_bond_scalings.f90.o $bldpath/src/writecell.f90.o $bldpath/src/writeddp.f90.o $bldpath/src/exit_orderly.f90.o $bldpath/src/kspace/kentropy.f90.o $bldpath/src/kspace/krhodiag.f90.o $bldpath/src/kspace/spnkspc.f90.o $bldpath/src/kspace/fndocc.f90.o $bldpath/src/getebsfbs.f90.o $bldpath/src/numel.f90.o $bldpath/src/get_dq2chia.f90.o $bldpath/src/kspace/kemag.f90.o $bldpath/src/eval_bsens.f90.o $bldpath/src/forcebop.f90.o $bldpath/src/kspace/eval_kens.f90.o $bldpath/src/kspace/kebsfbs.f90.o $bldpath/src/forcecheck.f90.o $bldpath/src/bldnebt.f90.o $bldpath/src/forcedetails.f90.o $bldpath/src/neb.f90.o $bldpath/src/mod_par.f90.o $bldpath/src/kspace/kdosplot.F90.o $bldpath/src/mkstrxd.F90.o $bldpath/src/scg.F90.o $bldpath/src/makcgn.F90.o $bldpath/src/mkstrxidx.F90.o $bldpath/src/soldhj.F90.o $bldpath/src/ropyln.F90.o $bldpath/src/ropcsm.F90.o $bldpath/src/ropyln1.F90.o $bldpath/src/besslr.F90.o $bldpath/src/tbshfl.F90.o $bldpath/src/scglp1.F90.o $bldpath/src/qmix.F90.o $bldpath/src/broyj.F90.o $bldpath/src/dgedi.F90.o $bldpath/src/dsifa.F90.o $bldpath/src/dsidi.F90.o $bldpath/src/dsmpy.F90.o $bldpath/src/dqinv.F90.o
+build $bldpath/src/main_nmp.f90.o: fc $srcpath/src/main_nmp.f90 | $bldpath/$modpath/mod_conf.mod $bldpath/$modpath/mod_io.mod $bldpath/$modpath/mod_clock.mod $bldpath/$modpath/mod_misc.mod $bldpath/$modpath/mod_const.mod $bldpath/$modpath/topologia.mod
+build $bldpath/bin/bop: fl $bldpath/src/main_nmp.f90.o $bldpath/libbop.a
+build $bldpath/bin/bop_dos: cmd  || $bldpath/bin/bop
+    command = ln -sf bop $bldpath/bin/bop_dos
+build $bldpath/bin/bop_elas: cmd  || $bldpath/bin/bop
+    command = ln -sf bop $bldpath/bin/bop_elas
+build $bldpath/bin/bop_kdos: cmd  || $bldpath/bin/bop
+    command = ln -sf bop $bldpath/bin/bop_kdos
+build all: phony $bldpath/bin/bop $bldpath/bin/bop_dos $bldpath/bin/bop_elas $bldpath/bin/bop_kdos
+build clean: cmd 
+    command = ninja -t clean
+
+default all
+

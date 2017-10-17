@@ -1,0 +1,126 @@
+ 
+      subroutine kbldh()
+
+      use mod_precision
+      use mod_all_scalar
+      use mod_const
+      use mod_kspace
+      use topologia, only : iproc, mpmap
+      use mod_atom_ar, only : btype,bsort
+      use mod_io, only : print_c
+      
+      implicit none
+
+      include "../Include/Atom.array"
+      include "../Include/NebList.array"
+      include "../Include/PosVel.array"
+
+      
+      real(dp) :: dea,phase
+      real(dp) :: errdx,errdy,errdz,errlmt
+
+      integer :: i,j,ik,info
+      integer :: za,zb,mapb
+      integer :: ja,ja0,ia,ib,la,lb
+      integer :: nstta,nsttb
+      integer llist1(ml)
+      integer llist2(ml)
+      integer nl1,nl2
+      integer :: t1,t2,t3,t4,t5
+
+      real(dp) :: scf(14),scfcut(14)
+
+      real(dp) :: dr(3)
+      real(dp) :: ksubh(mxnstat,mxnstat)
+      complex(dp) :: fac
+      type(bond_conf_t),pointer :: bond
+
+
+      errlmt=0.001
+      t1=0
+      t2=0
+      t3=0
+      t4=0
+
+
+      do ik = mpmap(iproc)+1, mpmap(iproc+1)                     
+         kham(:,:,ik) = cmplx(0.0_dp,0.0_dp,kind=dp)
+!         write(6,'("ik,k:",i2,3(x,f6.3))') ik, kk(:,ik)
+         do ia = 1,nd
+!             print *,'    ia:',ia
+            za = z(ia)
+            nstta = nstt(za)
+            nl1 = nl(za)
+            llist1 = llist(:,za)
+            dea = de(ia)
+            
+            call states(za,nl1,nstt1,llist1)
+!          For each neighboring ion (B) do ...
+!
+            ja = aptr(ia)
+            ja0 = ja - 1
+            do while (bptr(ja) /= eol)               
+               ib = bptr(ja)
+               mapb = map(ib)
+               zb = z(mapb)
+               nsttb = nstt(zb)
+               nl2 = nl(zb)
+               llist2 = llist(:,zb)
+               
+               dr = ad(:,ia)-ad(:,ib)
+               
+               phase = sum(kk(:,ik)*dr)
+               
+               fac = cmplx(cos(phase),sin(phase),kind=dp)
+!                if (ik < 10) write(6,"('    ib,r,ph,c:',2(x,i2),x,3(x,f6.3),2x,f6.3,a,2(x,f6.3),a)")&
+!                   & ja-ja0,mapb, dr, phase, "(",rfac,ifac,")"
+!            write(*,*) SCR(12,IA,IB)
+
+! Test IA and IB and include correct Screening Function
+
+               if ((ia /= ib).and.(scf_include == 1)) then
+                  if (ia <= nd) then
+                     t1=t1+1
+                     do i=1,nnbnd(ia)
+                        if (all(abs(nnbdr(:,ia,i)-dr) < errlmt)) then
+                           scfcut = scr(:,ia,i)
+                           t2=t2+1
+                        endif
+                     enddo
+                  elseif ( map(ia)  /=  0 ) then
+                     t3=t3+1
+                     t5=0
+                     do i=1,nnbnd( map(ia) )
+                        if (all(abs(nnbdr(:,map(ia),i)-dr) < errlmt)) then
+                           scfcut = scr(:,map(ia),i)
+                           t4=t4+1
+                           t5=1
+                        endif
+                     enddo
+                     if (t5 == 0) then
+                        write(*,*) ia,map(ia)
+                     endif
+                  else
+                     call screenf(ia,ib,scf)
+                     call scrcut(scf,scfcut)
+                  endif
+               else
+                  scfcut = 1.0_dp
+               endif
+              
+              bond => rtc % ham_conf % b(bsort(btype(za,zb)))
+
+               call matel(za,nl1,nstta,llist1,zb,nl2,nsttb,llist2,dr,ksubh,dea,scfcut,bond)
+
+               do la = 1,nstta
+                  do lb = 1,nsttb
+                     kham(khpos(ia)+la, khpos(mapb)+lb, ik) = kham(khpos(ia)+la, khpos(mapb)+lb, ik) + fac*ksubh(la,lb)
+                  end do
+               end do
+               ja = ja+1
+            end do
+
+         end do
+      end do
+
+   end subroutine kbldh

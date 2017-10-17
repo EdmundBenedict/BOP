@@ -1,0 +1,278 @@
+ 
+      subroutine getebsfbs(flag)
+          use mod_precision
+          use mod_all_scalar
+          use mod_const
+          use topologia
+          use mod_ham
+          use ab_io
+          use mod_chi
+          use mod_clock
+          use mod_conf, only : rtc 
+#ifdef MPI
+          use mpi, only : mpi_in_place, mpi_integer, mpi_sum, mpi_comm_world
+#endif          
+!
+!    This is a routine to calculate the band structure energy and forces
+!     using the bond order potential method.
+!
+!     FLAG = 0 => Read the coefficients from disk, and find Fermi energy.
+!     FLAG = 1 => Evaluate the coefficients, write them to disk, and find Fermi energy.
+!     FLAG = 2 => Evaluate the coefficients, do not write them to disk, and do not find Fermi energy.
+!
+
+      implicit none
+
+      include "../Include/Atom.array"
+      include "../Include/ag.conn"
+!       include "../Include/BondOrder.array"
+
+      integer, intent(inout) :: flag
+      
+      integer :: it, mxit, ia,  inflag, ierr, mit, mgit
+      real(dp) :: etott, merr
+      
+      real(qp) :: avdde, sumz
+      real(qp), allocatable :: de_prev(:), dq_prev(:), dec(:),  td(:), dql(:)
+      
+
+      character(len=20) :: ffmt
+
+      procedure(real(dp)) :: getefsrt, getefnull, numel, eff
+      
+      integer,parameter :: mixing_type = 2
+      integer :: loc_clusiz
+      integer(8) :: c1,c2
+
+      integer :: i
+      real(dp) :: ef,nf
+
+      real(dp), allocatable :: mg_o(:)
+
+
+
+
+      loc_clusiz = 0
+!       print *, 'iproc, loc_clusiz:', iproc, loc_clusiz
+      do ia = mpmap(iproc)+1, mpmap(iproc+1)
+!          if(ia>2)exit
+         call assoc_ab(ia) 
+         call assoc_ham(ia)
+!          call system_clock(c1)
+         call getnch(ia)   !Find number of linear chains per site.
+         call bldclus(ia) !Build cluster.
+!          print *, 'iproc, ia, pcluster:', iproc, ia, pcluster(nbase+1)
+         loc_clusiz = loc_clusiz + pcluster(nbase+1)-1
+         call bldh() !Build Hamiltonian.
+!          call system_clock(c2)
+!          print *,'hamrel',real(c2-c1,dp)/real(cr,dp)
+      end do
+
+!       stop 'done bldclus'
+
+#ifdef MPI
+!       print *, 'iproc, loc_clusiz:', iproc, loc_clusiz
+!       call mpi_allreduce(mpi_in_place, aveclusiz, 1, mpi_real8, mpi_sum, mpi_comm_world,ierr)
+      call mpi_allreduce(mpi_in_place, loc_clusiz, 1, mpi_integer, mpi_sum, mpi_comm_world,ierr)
+#endif
+
+      aveclusiz = loc_clusiz/real(nd,kind=dp)
+
+! #ifdef MPI
+!       call mpi_finalize(ierr)
+!       stop
+! #endif
+
+      if (.not. quiet) print *, 'aveclusiz:', aveclusiz
+      
+      inflag = flag
+!       mxit = 500
+      mxit = rtc % bop_conf % mxit 
+      if (mag) then
+        mgit = rtc % bop_conf % mgit 
+        merr = rtc % bop_conf % merr
+        mit = 1
+      end if
+      it = 1
+      
+!       allocate(de_prev(nd), dq_prev(nd), td(nd), dec(nd), dql(nd))
+!       dec = real(de(:nd),qp)
+      sumz = sum( (/ (real(zc(z(ia)), qp), ia = 1,nd) /) )
+!       dq2chia(:nd) = 0.0_dp
+
+      if ((qerr < 0.0_dp).or.(mixing_type == 0)) mxit = 1
+      if (.not. quiet) then
+         write(9,"('Imposing LCN ...')")
+      end if
+
+! 
+!       select case (mixing_type) 
+!       case (1)
+!          do
+!             
+!    !           print "('sumzde,de:',2(x,f22.14))", sum( (/ (de(ia)*zc(z(ia)), ia = 1,nd) /) ), de(9)
+!             de(:nd) = real(dec - sum( (/ (dec(ia)*zc(z(ia)), ia = 1,nd) /) ) / sumz, dp)
+!    !           print "('bde:',x,f22.14)", de(9)
+!             
+!             lef = findef(flag,locc)
+!                      
+!             dql = real(dq(:nd),qp)
+!             
+!             if (.not. quiet) then
+!                etott = eprom + ebond + epair - eatom - uent
+!                write(6,'(/,"it:",i3)') it
+!                write(6, ffmt) 'de', de(:nd)
+!                write(6, ffmt) 'dec', dec
+!                write(6, ffmt) 'dq', dq(:nd)
+!    !             write(6, ffmt) 'ch', chian(:nd)
+!    !             write(6,"('de,dq:',2(x,f22.14))") de(9),dq(9)
+!                write(6, '("etot:",x,f22.16)') etott
+!                write(6, '("eprom:",x,f22.16)') eprom
+!                write(6, '("eatom:",x,f22.16)') eatom
+!                if (abs(dqmax) <= qerr) then 
+!                   write(9,"('c')",advance='no')
+!                else if (it == 1) then
+!                   write(9,"('s')",advance='no')
+!                else if (it == mxit) then
+!                   write(9,"('x')",advance='no')
+!                else
+!                   write(9,"('i')",advance='no')
+!                end if
+!                
+!                write(9,"(2(x,f22.14),x,i3)") etott, dqmax, it
+!                
+!             end if
+!             
+!    !           if (maxval(abs(dq(:nd))) <= qerr) exit
+!             if (abs(dqmax) <= qerr .or. it == mxit) exit
+!                
+!             if (it > 1) then
+!                do ia = 1, nd
+!    !     if (.not. quiet) print *, 'dif:',   (dec(ia) - de_prev(ia))/ (dq(ia) - dq_prev(ia) ), abs(dq(ia) - dq_prev(ia))
+!                   if ( abs(dec(ia) - de_prev(ia)) > 6.0_qp*abs(dql(ia) - dq_prev(ia))) then
+!                      td(ia) = -dql(ia)
+!    !    if (.not. quiet) print *,red,'potential daner', (dec(ia) - de_prev(ia)), (dq(ia) - dq_prev(ia)),endc
+!                   else
+!                      td(ia) = dql(ia) * (dec(ia) - de_prev(ia)) / ( dql(ia) - dq_prev(ia) )
+!                   endif
+!                end do
+!                de_prev = dec
+!                dq_prev = dql
+!                dec = dec - td
+!    !               write(6,"('td,nde:',2(x,f22.14))") td(9),de(9)
+!             else
+!                de_prev = dec
+!                dq_prev = dql
+!                dec = dec + dql
+!             end if
+!             
+!             flag = inflag
+!             it = it + 1
+!          end do
+! 
+! 
+! 
+!       case (2)
+
+         
+         if (mag) allocate(mg_o(nd))
+         
+         do 
+            if (mag) then
+                if (.not. quiet) write(6,'(/,"mit:",i3)') mit
+                mg_o = mg(:nd)
+            end if
+            do                   
+                if (.not. quiet) write(6,'(/,"it:",i3)') it
+                
+                de(:nd) = de(:nd) - sum((/ (de(ia)*zc(z(ia)), ia = 1,nd) /))/sumz
+                
+                call spnbop(3)
+                
+                if (dqmax <= qerr .or. it == mxit) exit
+
+                de(:nd) = de(:nd) + dq2chia(:nd)
+                
+                it = it + 1
+            end do
+            
+            if (.not. mag) exit
+            mgmax = maxval(abs(mg(:nd) - mg_o))
+            print *, 'mgmax', mgmax
+            if (mgmax <= merr .or. it == mgit) exit
+            mit = mit + 1
+         end do   
+         
+         
+         if (mag) deallocate(mg_o)
+            
+!          call eval_bsens(lef)
+         
+!       end select
+
+
+!          call eval_bsens(lef)
+
+!          if (.not. quiet) then
+!             write(6, '("etot:",x,f22.16)') etott
+!             write(6, '("eprom:",x,f22.16)') eprom
+!             write(6, '("eatom:",x,f22.16)') eatom
+!          end if
+! 
+
+! 
+!       do i=0,1000
+!          ef = -2.0_dp + i*(6-(-2))/1000.0_dp
+!          nf = numel(0,ef)
+!          write(344,*) ef,nf,dndm
+!       end do
+! 
+! 
+!       call getdos(1001)
+! 
+
+
+
+
+
+
+
+!    
+! 
+!     
+!       do it = 1, 15
+!           
+!           de(:nd) = dec - sum( (/ (dec(ia)*zc(z(ia)), ia = 1,nd) /) ) / sumz
+!           
+!           if ((flag == 0).or.(flag == 1)) then
+!               if (term == 1) then
+!                   lef = getefsrt(locc,flag)
+!               elseif ((term == 2).or.(term == 3)) then
+!                   lef = getefnull(locc,flag)
+!               endif
+!           else
+!               totnia = numel(flag,lef)
+!           endif
+!                     
+! 
+!         etott = eprom + ebond + epair - eatom - uent
+!         write(6,'(/,"it:",i3)') it
+!         write(6, ffmt) 'de', de(:nd)
+!         write(6, ffmt) 'dec', dec
+!         write(6, ffmt) 'dq', dq(:nd)
+!         write(6, '(a,"etot:",x,f22.16,a)') red,etott,endc
+!         print "('eflo:',x,f22.14)", eflo
+!         flag = inflag
+! 
+!       end do
+! 
+!    
+!    
+   
+   
+
+!       deallocate(de_prev, dq_prev, td, dec, dql)
+      
+      
+      end subroutine getebsfbs
+

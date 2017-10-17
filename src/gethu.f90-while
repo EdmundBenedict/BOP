@@ -1,0 +1,145 @@
+ 
+      subroutine gethu(u,nu,hu,nhu)
+          use mod_precision
+
+
+          use mod_const
+
+!
+!    This is a routine to multiply the Hamiltonian into a vector.
+!
+
+      implicit none
+
+!
+!    Include constants.
+!
+
+!      include "Include/ALL.const"
+
+!
+!    Include scalars.
+!
+
+!      include "Include/ALL.scalar"
+
+!
+!    Include arrays.
+!
+
+      include "Include/Atom.array"
+      include "Include/Hamilt.array"
+!      include "Include/Moment.array"
+      include "Include/NebList.array"
+
+!
+!    Declare the simple variables.
+!
+
+      real(dp) :: uli
+
+      integer nstta,nsttb
+      integer ia,ib,ja,ja0,ic
+      integer la,lb
+      integer nu,nhu
+      integer i,l,dj
+
+!
+!    Declare the arrays.
+!
+
+      real(dp) :: u(mxnstat,nu)
+      real(dp) :: hu(mxnstat,nhu)
+      
+!       character(len=100) :: fm
+!
+!    Initialise variables.
+!
+
+!       do i = 1,nhu,1
+!          do l = 1,mxnstat,1
+!             hu(l,i) = 0.0d0
+!          enddo
+!       enddo
+      
+      hu(:,:) = 0.0_dp
+
+!
+!    Multiply the vector by the matrix.
+!
+!    For each atom in cluster do ...
+!
+      
+!       write(fm, '(a,i0,a)') '("u: ", ', nu , '(x,f8.6))'
+!       print fm, u(1,:)
+!       
+      
+        
+        
+      
+      do i = 1,nu
+         ia = cluster(i)
+!          nstta = nstt(z(ia))
+
+!
+!       For each nearest neighbor do ...
+!
+!          write(392, '("ia: ",i0,3x,i0,"/",i0)') ia,  i,nu 
+         ja = aptr(ia)
+         ja0 = ja -1
+         
+         ib = bptr(ja)
+         do while (ib /= eol)
+            
+!             nsttb = nstt(z(ib))
+            ic = decipher(ib)
+
+!             write(392, '("    ib, ic:  ", i5,x, i5)') ib,ic
+
+!
+!          If neighbor is inside total cluster do ..
+!
+
+            if (ic /= 0) then
+               dj = ja-ja0
+!                
+!                do la = 1,nstta,1
+!                   uli = u(la,i)
+!                   do lb = 1,nsttb,1
+! !                      hu(lb,ic) = hu(lb,ic) + h(la,lb,dj,i)*u(la,i)
+!                     hu(lb,ic) = hu(lb,ic) + h(la,lb,dj,i)*uli
+!                   enddo
+!                enddo
+!               
+!                 print *, 'nstta: ', nstta
+!                 print *, 'h: ', h(:,:,dj,i)
+                do lb = 1,nstt(z(ib))
+!                     do la = 1, nstta
+!                         hu(lb,ic) = hu(lb,ic) + h(la,lb,dj,i)*u(la,i)
+!                     end do
+!                         print *, 'lb: ',lb
+! if issues occur try putting the limit up to nstta
+                        hu(lb,ic) = hu(lb,ic) + dot_product(h(:,lb,dj,i),u(:,i))
+                end do
+!                  hu(nstt(z(ib))+1:mxnstat,ic) = 0.0_dp
+!                 print *, 'hu: ', hu(nstt(z(ib))+1:mxnstat,ic), mxnstat, nsttb
+!                 forall (lb=1:nsttb, la=1:nstta) hu(lb,ic) = hu(lb,ic) + h(la,lb,dj,i)*u(la,i)
+                
+                
+                
+!                
+!                print *,'---------------------------------------------------------------'
+!                print *, h(1:mxnstat,1:mxnstat,dj,i)
+
+!                hu(:,ic) = hu(:,ic) + matmul(u(:,i), h(:,:,ja-ja0,i) )
+               
+!                call dgemv('T', nstta, nsttb, 1.0d0, h(1,1,dj,i), mxnstat, u(1,i), 1, 1.0d0, hu(1,ic), 1 )
+!                hu(nstt(z(ib))+1:mxnstat,ic) = 0.0_dp
+            endif
+
+            ja = ja + 1
+            ib = bptr(ja)
+         enddo
+      enddo
+    
+      end

@@ -1,0 +1,18 @@
+ 
+
+!
+!    Atomic Force constant matrix and related mappings
+!
+
+!*** Stuff to calculate the vibrational frequencies with
+      real(dp) ::  dynr(3,3,mxs,mxnd)
+      integer mapr(3,mxnd),mapx(mxnd)
+      integer nper(3)
+      real(dp) :: delta
+
+!
+!    Declare the common blocks.
+!
+
+      common /vib/delta,dynr,mapr,mapx,nper
+
